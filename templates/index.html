@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-2xl font-semibold mb-4">PaperShelf</h1>
+
+<!-- 🔍 Search -->
+<form method="get" class="flex gap-2 mb-3">
+  <input
+    name="q"
+    value="{{ q }}"
+    placeholder="Search title/abstract"
+    class="flex-1 border rounded-lg px-3 py-2"
+    oninput="liveSearch(this.value)"
+  />
+</form>
+
+<!-- 🧹 Clean DB / Files -->
+<form method="post" action="/dev/clean" class="mb-4">
+  <button class="px-3 py-2 rounded-lg border text-red-600 hover:bg-red-50">
+    🧹 Clean DB & Files (Dev)
+  </button>
+</form>
+
+<!-- 📂 Upload Controls -->
+<div class="flex items-center gap-3 mb-4">
+  <div class="flex items-center gap-3">
+    <label class="px-3 py-2 rounded-lg border cursor-pointer bg-white hover:bg-gray-50">
+      Select Folder
+      <input id="folderPicker" type="file" webkitdirectory directory multiple hidden />
+    </label>
+
+    <!-- Progress Bar -->
+    <div id="progressWrap" class="hidden min-w-[260px]">
+      <div class="text-sm text-gray-700 mb-1">
+        <span id="progressText">Preparing…</span>
+      </div>
+      <div class="w-64 bg-gray-200 rounded-full h-2 overflow-hidden">
+        <div id="progressBar" class="h-2 bg-black rounded-full" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Drag & Drop -->
+  <div id="drop" x-data
+       @dragover.prevent
+       @drop.prevent="
+         const files = $event.dataTransfer.files;
+         for (const f of files) {
+           if (!f.name.toLowerCase().endsWith('.pdf')) continue;
+           const fd = new FormData();
+           fd.append('file', f);
+           fetch('/upload', { method:'POST', body:fd })
+             .then(() => refreshCards());
+         }
+       "
+       class="ml-auto border-2 border-dashed rounded-xl px-4 py-3 text-sm text-gray-600">
+    Drag & drop PDF(s) here to add
+  </div>
+</div>
+
+<!-- 🔒 Hidden DOM template (using existing _paper_card.html structure) -->
+<div id="card-template" class="hidden">
+  {% if papers and papers|length > 0 %}
+    {% set p = papers[0] %}
+    {% include "_paper_card.html" %}
+  {% else %}
+    <div class="group bg-white rounded-xl border shadow-sm hover:shadow-md transition overflow-hidden flex flex-col">
+      <div class="relative h-48 bg-gray-100 flex items-center justify-center overflow-hidden">
+        <img class="thumb-img w-full h-full object-cover" alt="thumbnail" src="/static/no_thumb.png" />
+        <a class="chip-open absolute top-2 right-2 inline-flex items-center gap-1 rounded-full bg-white/90 backdrop-blur px-3 py-1 text-xs font-medium text-blue-700 hover:bg-white shadow" target="_blank">Open</a>
+      </div>
+      <div class="p-4 flex flex-col gap-2">
+        <a class="card-title font-semibold text-gray-900 leading-snug hover:underline line-clamp-2" target="_blank">Untitled</a>
+        <div class="flex items-center gap-2 text-xs text-gray-600">
+          <span class="year-badge inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5">—</span>
+          <span class="src-badge inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5">Auto</span>
+        </div>
+        <div class="card-authors text-xs text-gray-700"></div>
+        <div class="card-abstract text-sm text-gray-700 leading-relaxed line-clamp-3">No abstract available.</div>
+      </div>
+      <div class="px-4 pb-4 mt-auto flex justify-end">
+        <a class="card-open inline-flex items-center gap-2 text-sm font-medium text-blue-700 hover:text-blue-900 hover:underline" target="_blank">Open PDF</a>
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<!-- 🧾 Cards -->
+<div id="cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for p in papers %}
+    {% include "_paper_card.html" %}
+  {% else %}
+    <div class="text-gray-500">No papers yet. Select a folder or drop PDFs above.</div>
+  {% endfor %}
+</div>
+
+<script>
+  const folderPicker = document.getElementById('folderPicker');
+  const progressWrap = document.getElementById('progressWrap');
+  const progressText = document.getElementById('progressText');
+  const progressBar  = document.getElementById('progressBar');
+
+  function setProgress(done, total, name) {
+    const pct = total ? Math.round((done / total) * 100) : 0;
+    if (progressText) progressText.textContent = `Uploading ${done}/${total}${name ? ' – ' + name : ''}`;
+    if (progressBar)  progressBar.style.width = pct + '%';
+  }
+  function showProgress(show) {
+    if (!progressWrap) return;
+    progressWrap.classList.toggle('hidden', !show);
+  }
+
+  // 🔍 Live Search — uses existing card template
+  async function liveSearch(q) {
+    const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    const cardsDiv = document.getElementById('cards');
+    cardsDiv.innerHTML = "";
+
+    if (!data.results.length) {
+      cardsDiv.innerHTML = '<div class="text-gray-500">No matching papers found.</div>';
+      return;
+    }
+
+    const templateCard = document.querySelector('#card-template > div');
+    if (!templateCard) {
+      console.error("Card template not found");
+      return;
+    }
+
+    for (const p of data.results) {
+      const card = templateCard.cloneNode(true);
+
+      // Fill fields dynamically
+      const thumb = card.querySelector('.thumb-img');
+      const title = card.querySelector('.card-title');
+      const authors = card.querySelector('.card-authors');
+      const abstract = card.querySelector('.card-abstract');
+      const openLinks = card.querySelectorAll('a');
+
+      if (thumb) thumb.src = p.thumb_url || '/static/no_thumb.png';
+      if (title) { title.textContent = p.title || 'Untitled'; if (p.file_url) title.href = p.file_url; }
+      if (authors) authors.textContent = (p.authors || []).join(', ');
+      if (abstract) abstract.textContent = p.abstract || 'No abstract available.';
+      openLinks.forEach(a => { if (a.classList.contains('chip-open') || a.classList.contains('card-open')) { if (p.file_url) a.href = p.file_url; }});
+
+      const yearBadge = card.querySelector('.year-badge');
+      if (yearBadge) yearBadge.textContent = p.year || '—';
+      const srcBadge = card.querySelector('.src-badge');
+      if (srcBadge) srcBadge.textContent = p.abstract_source || 'Auto';
+
+      // Append + re-init Alpine so expand buttons and icons work
+      cardsDiv.appendChild(card);
+      if (window.Alpine) Alpine.initTree(card);
+    }
+  }
+
+  // Refresh cards after upload
+  async function refreshCards() {
+    const qInput = document.querySelector('input[name="q"]');
+    const q = qInput ? qInput.value : '';
+    await liveSearch(q);
+  }
+
+  // 📁 Folder Upload Logic
+  if (folderPicker) {
+    folderPicker.addEventListener('change', async (e) => {
+      const all = Array.from(e.target.files || []);
+      const pdfs = all.filter(f => f.name.toLowerCase().endsWith('.pdf'));
+      if (!pdfs.length) return;
+
+      showProgress(true);
+      setProgress(0, pdfs.length, '');
+
+      let done = 0;
+      for (const f of pdfs) {
+        try {
+          setProgress(done, pdfs.length, f.name);
+          const fd = new FormData();
+          fd.append('file', f);
+          await fetch('/upload', { method: 'POST', body: fd });
+          await refreshCards();
+        } catch (err) {
+          console.error('Upload failed:', err);
+        } finally {
+          done += 1;
+          setProgress(done, pdfs.length, done < pdfs.length ? pdfs[done]?.name : '');
+        }
+      }
+
+      setProgress(pdfs.length, pdfs.length, 'Done');
+      setTimeout(async () => {
+        showProgress(false);
+        e.target.value = '';
+        // 🔄 Refresh entire view by calling main "/" endpoint after all uploads complete
+        const res = await fetch('/');
+        const html = await res.text();
+        document.open();
+        document.write(html);
+        document.close();
+      }, 800);
+    });
+  }
+</script>
+{% endblock %}
