@@ -11,8 +11,16 @@ try:
 except Exception:
     _HAS_PIL = False
 
+
 # Heuristic stopwords for naive title detection
 HEADER_STOP = re.compile(r"^\s*(introduction|background|related work|1\.\s|abstract|keywords)\b", re.I)
+
+# Extra prefixes to ignore when scoring title candidates (from older heuristic)
+HEADER_STOP_PREFIXES = re.compile(
+    r"^(arxiv|preprint|manuscript|submitted|accepted|doi:|issn|icml|neurips|cvpr|eccv|"
+    r"ieee|acm|springer|elsevier|proceedings|journal|transactions|vol\.|no\.)\b",
+    re.I
+)
 
 
 def file_safe(name: str) -> str:
@@ -23,38 +31,151 @@ def file_safe(name: str) -> str:
 
 def extract_title_authors_year_from_bytes(pdf_bytes: bytes) -> Tuple[Optional[str], Optional[List[str]], Optional[str]]:
     """
-    Very simple heuristics: look at first 1–3 pages text; guess title/authors/year.
+    Improved heuristic using layout info (font sizes/positions) from page 1, with
+    light fallbacks to plain text on pages 1–2.
     """
-    title, authors, year = None, [], None
-    with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
-        text = ""
-        for i in range(min(3, len(doc))):
-            text += "\n" + doc[i].get_text("text")
+    title: Optional[str] = None
+    authors: Optional[List[str]] = None
+    year: Optional[str] = None
 
-    # Title: first non-empty line before common headers
-    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
-    for ln in lines[:30]:
-        if HEADER_STOP.search(ln):
-            break
-        if 6 < len(ln) < 220:
-            title = title or ln
+    def _clean(s: str) -> str:
+        s = re.sub(r"\s+", " ", s).strip()
+        # keep common punctuation that appears in titles/authors
+        s = re.sub(r"[^\w\s\-:()\[\],&.+/]+", "", s)
+        return s
 
-    # Authors: naive split by commas on the next line(s)
-    if title and title in lines:
-        idx = lines.index(title)
-        candidate = " ".join(lines[idx + 1 : idx + 4])
-        candidate = re.sub(r"\S+@\S+", "", candidate)
-        parts = [p.strip() for p in re.split(r",| and ", candidate) if 1 < len(p.strip()) < 80]
-        authors = [p for p in parts if not re.search(r"\d|section|university|department", p, re.I)]
-        if not authors:
-            authors = None
-    else:
-        authors = None
+    try:
+        with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+            if len(doc) == 0:
+                return None, None, None
 
-    # Year: first 19xx/20xx
-    m = re.search(r"\b(19|20)\d{2}\b", text)
-    if m:
-        year = m.group(0)
+            page = doc[0]
+
+            # Collect candidate lines with their max font size and top y
+            pd = page.get_text("dict")
+            candidates: List[Tuple[float, float, str]] = []  # (max_font, y0, text)
+            for b in pd.get("blocks", []):
+                for l in b.get("lines", []):
+                    spans = l.get("spans", [])
+                    if not spans:
+                        continue
+                    txt = _clean("".join(s.get("text", "") for s in spans))
+                    if not txt:
+                        continue
+                    max_font = max(s.get("size", 0.0) for s in spans)
+                    y0 = min((s.get("origin", [0.0, 0.0])[1] or 0.0) for s in spans)
+                    candidates.append((max_font, y0, txt))
+
+            # Sort by vertical position (top first), break ties by larger font
+            candidates.sort(key=lambda t: (t[1], -t[0]))
+
+            scored: List[Tuple[float, int, float, float, str]] = []
+            for i, (fsize, y0, txt) in enumerate(candidates):
+                # Length filters
+                if len(txt) < 8 or len(txt) > 200:
+                    continue
+                # Skip clear non-title prefixes
+                if HEADER_STOP.search(txt) or HEADER_STOP_PREFIXES.search(txt[:40]):
+                    continue
+                # Skip abstract/keywords or emails
+                if re.search(r"^(abstract|summary|keywords?)\b", txt, re.I):
+                    continue
+                if "@" in txt:
+                    continue
+                # Too many digits → likely metadata
+                if sum(ch.isdigit() for ch in txt) > 6:
+                    continue
+
+                # Penalize ALL-CAPS
+                letters = [c for c in txt if c.isalpha()]
+                upper_ratio = (sum(c.isupper() for c in letters) / len(letters)) if letters else 0.0
+
+                len_score = -abs(len(txt) - 75) / 75.0
+                pos_bonus = -(y0 / (page.rect.height or 1.0))  # prefer higher on page
+                cap_penalty = -0.8 if upper_ratio > 0.9 else 0.0
+                score = (fsize * 2.0) + len_score + pos_bonus + cap_penalty
+                scored.append((score, i, fsize, y0, txt))
+
+            chosen_idx: Optional[int] = None
+            if scored:
+                scored.sort(reverse=True)
+                _, idx, _, _, seed = scored[0]
+                chosen_idx = idx
+                title = seed
+
+                # Try to join the next line if it looks like a title continuation
+                if idx + 1 < len(candidates):
+                    _, y1, nxt = candidates[idx + 1]
+                    same_band = abs(y1 - candidates[idx][1]) < 25
+                    bad_next = (
+                        re.search(r"^(abstract|summary|keywords?)\b", nxt, re.I)
+                        or "@" in nxt
+                        or re.search(r"\b(University|Department|Institute|Laboratory|College|School)\b", nxt, re.I)
+                    )
+                    if same_band and not bad_next and not title.endswith((".", ":", "?", "!", ";")):
+                        j = _clean(nxt)
+                        if 8 <= len(f"{title} {j}") <= 220:
+                            title = f"{title} {j}".strip()
+
+            # Authors: scan a few lines after the title band
+            if chosen_idx is not None:
+                ordered_lines = [(y, t) for _, y, t in candidates]
+                seed_text = candidates[chosen_idx][2]
+                start = 0
+                for k, (_, t) in enumerate(ordered_lines):
+                    if seed_text in t or t in seed_text:
+                        start = k
+                        break
+
+                possible: List[str] = []
+                for _, ln in ordered_lines[start + 1 : start + 10]:
+                    if re.match(r"^(abstract|summary|keywords?)\b", ln, re.I):
+                        break
+                    if re.search(r"@|University|Department|Institute|Laboratory|College|School", ln, re.I):
+                        break
+                    # Look for Person Name patterns
+                    if re.search(r"[A-Z][a-z]+(?:\s+[A-Z]\.)?(?:\s+[A-Z][a-z]+)+", ln):
+                        possible.append(ln)
+
+                if possible:
+                    joined = " ".join(possible)
+                    parts = re.split(r"\s*,\s*|\s+and\s+|;", joined)
+                    names = [a.strip() for a in parts if a.strip()]
+                    names = [a for a in names if re.search(r"[A-Z][a-z]+", a) and len(a) <= 60]
+                    # Deduplicate (case-insensitive)
+                    seen = set()
+                    uniq: List[str] = []
+                    for a in names:
+                        k = a.lower()
+                        if k not in seen:
+                            seen.add(k)
+                            uniq.append(a)
+                    authors = uniq[:10] or None
+
+            # Year: search first two pages' plain text
+            try:
+                first_text = page.get_text("text")
+            except Exception:
+                first_text = ""
+            m = re.search(r"\b(19|20)\d{2}\b", first_text)
+            if not m and len(doc) > 1:
+                try:
+                    second_text = doc[1].get_text("text")
+                    m = re.search(r"\b(19|20)\d{2}\b", second_text)
+                except Exception:
+                    m = None
+            if m:
+                year = m.group(0)
+
+    except Exception:
+        # Swallow and return partials if any
+        pass
+
+    # Normalize all-caps titles to Title Case (lightly)
+    if title:
+        t_letters = [c for c in title if c.isalpha()]
+        if t_letters and (sum(c.isupper() for c in t_letters) / len(t_letters)) > 0.97:
+            title = title.title()
 
     return title, authors, year
 
