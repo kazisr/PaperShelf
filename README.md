@@ -7,12 +7,24 @@ It automatically extracts metadata (title, authors, year, abstract) and generate
 
 ## 🚀 Features
 
-- 🧠 **Automatic Metadata Extraction** – Detects title, authors, and year from PDF text.
-- 🖼️ **First-Page Thumbnail Preview** – Renders the first page as a visual reference.
-- 🔍 **Instant Search** – Search by title or abstract in real time.
-- 📁 **Local Storage** – Everything stays inside your `data/` folder (SQLite + files).
-- 🧹 **One-Click Cleanup (Dev)** – Reset database and remove uploaded files easily.
-- 🧩 **Extensible** – Modular service structure (FastAPI + SQLAlchemy + Jinja2).
+- 🧠 **Intelligent Metadata Extraction** – Automatically detects title, authors, and publication year from PDF text using layout analysis.
+- 🖼️ **Smart Thumbnails** – Generates responsive first-page previews.
+- 🧩 **Compact & Polished Cards** – Each paper card features rounded corners, hover elevation, and improved readability.
+- 🧾 **Data Source Tagging** – Displays combined sources (e.g., `System + Crossref-doi`) instead of DOI link.
+- 📥 **Smart Upload Area** – Drag-and-drop uploader appears only when no papers are present.
+- 🔍 **Instant Search & Filter** – Find papers by title, author, or abstract in real time.
+- 📁 **Local Storage** – All data (PDFs, metadata, and previews) stay local in `data/` (SQLite + files).
+- 🧹 **One-Click Cleanup (Dev)** – Easily reset or clear the library for development.
+- ⚙️ **Modular Architecture** – Built with FastAPI + SQLAlchemy + Jinja2 for extensibility.
+
+---
+
+**Latest UI Improvements:**
+- Improved paper card UI with cleaner layout, responsive thumbnail.
+- Dynamic card resizing for better grid presentation (smaller footprint, hover effects).
+- Adaptive image height for different screen sizes (mobile, tablet, desktop).
+- Drag & Drop upload area hidden automatically when papers are present.
+- DOI button replaced with `data_source` label display.
 
 ---
 
@@ -86,6 +98,8 @@ pip install -r requirements.txt
 > sudo apt install tesseract-ocr ghostscript qpdf
 > ```
 
+> **No additional setup is required for the latest UI features.** All UI improvements are handled via frontend code and CSS.
+
 ### 4️⃣ Run the Application
 
 ```bash
@@ -149,13 +163,31 @@ Defined in `app/config.py`:
 
 ## 💡 Future Enhancements
 
-- [ ] DOI / arXiv metadata auto-fetch  
-- [ ] Author / Year filters in search  
-- [ ] Bulk import from folder  
-- [ ] Tag-based organization  
-- [ ] CSV export of library  
-- [ ] Full-text OCR search (using SQLite FTS5)  
-- [ ] Dark/light theme toggle  
+- [ ] 📚 Add folder-based organization for collections or projects.
+- [ ] 🔖 Integrate external metadata (Crossref, Arxiv) for improved accuracy.
+- [ ] 🌙 Add dark/light theme toggle with persistent preference.
+- [ ] 🧭 Implement advanced search filters (year, author, venue).
+- [ ] 🔗 Enable automatic PDF linking for detected DOIs or arXiv IDs.
+- [ ] 🧠 Add semantic search and AI-based summarization support.
+- [ ] 📊 Add dashboard analytics for reading and citation tracking.
+
+---
+
+### UI Customization Notes
+- Thumbnail height automatically adjusts via CSS media queries.
+- Each paper card now supports `data_source` field (e.g., `System`, `Crossref-doi`, `Arxiv-id`, etc.).
+- The upload dropzone is only visible when there are no papers.
+- All cards include hover elevation, rounded corners, and improved readability.
+
+---
+
+### Changelog
+
+#### vNext (2025-10)
+- Refined UI with responsive image area.
+- Compact card design.
+- Added `data_source` tag replacing DOI button.
+- Added auto-hide for drag & drop area when papers exist.
 
 ---
 
