@@ -43,24 +43,6 @@
   </div>
 </div>
 
-<div id="drop" x-data
-     @dragover.prevent.delay.100="$el.classList.add('bg-blue-50', 'border-blue-500')"
-     @dragleave.prevent.delay.100="$el.classList.remove('bg-blue-50', 'border-blue-500')"
-     @drop.prevent="
-       $el.classList.remove('bg-blue-50', 'border-blue-500');
-       const files = $event.dataTransfer.files;
-       for (const f of files) {
-         if (!f.name.toLowerCase().endsWith('.pdf')) continue;
-         const fd = new FormData();
-         fd.append('file', f);
-         fetch('/upload', { method:'POST', body:fd })
-           .then(() => refreshCards());
-       }
-     "
-     class="mb-6 p-6 text-center border-4 border-dashed rounded-2xl border-gray-300 bg-gray-50 text-lg text-gray-500 transition duration-200 ease-in-out">
-  Drag & drop **PDF(s)** here to add 📥
-</div>
-
 <!-- keep your hidden template (unused now, but harmless) -->
 <div id="card-template" class="hidden">
   <div class="group bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col h-full">
@@ -95,6 +77,25 @@
     {% set paper = p %}
     {% include "_paper_card.html" %}
   {% else %}
+
+    <div id="drop" x-data
+     @dragover.prevent.delay.100="$el.classList.add('bg-blue-50', 'border-blue-500')"
+     @dragleave.prevent.delay.100="$el.classList.remove('bg-blue-50', 'border-blue-500')"
+     @drop.prevent="
+       $el.classList.remove('bg-blue-50', 'border-blue-500');
+       const files = $event.dataTransfer.files;
+       for (const f of files) {
+         if (!f.name.toLowerCase().endsWith('.pdf')) continue;
+         const fd = new FormData();
+         fd.append('file', f);
+         fetch('/upload', { method:'POST', body:fd })
+           .then(() => refreshCards());
+       }
+     "
+     class="col-span-full mb-6 p-6 text-center border-4 border-dashed rounded-2xl border-gray-300 bg-gray-50 text-lg text-gray-500 transition duration-200 ease-in-out">
+  Drag & drop **PDF(s)** here to add 📥
+</div>
+
     <div class="text-gray-500 text-lg p-8 border border-dashed rounded-xl col-span-full">
       No papers yet. Select a folder or drop PDFs above to get started!
     </div>

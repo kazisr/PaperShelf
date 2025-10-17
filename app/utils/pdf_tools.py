@@ -11,7 +11,6 @@ try:
 except Exception:
     _HAS_PIL = False
 
-
 # Heuristic stopwords for naive title detection
 HEADER_STOP = re.compile(r"^\s*(introduction|background|related work|1\.\s|abstract|keywords)\b", re.I)
 
@@ -27,6 +26,31 @@ def file_safe(name: str) -> str:
     """Light sanitizer for filenames."""
     s = re.sub(r"[^\w\-.]+", "_", name.strip())
     return s[:200] or "file"
+
+
+def compose_data_source(*sources: Optional[str]) -> Optional[str]:
+    """
+    Merge one or more abstract sources into a single string separated by ' + '.
+    - Preserves literal casing except normalizing 'system' → 'System'.
+    - Skips empties/None, de-duplicates while preserving order.
+    Examples:
+        compose_abstract_source("System") -> "System"
+        compose_abstract_source("System", "crossref-doi") -> "System + crossref-doi"
+        compose_abstract_source(None, "arxiv-id", "arxiv-id") -> "arxiv-id"
+    """
+    seen = set()
+    ordered: List[str] = []
+    for s in sources:
+        if not s:
+            continue
+        parts = [p.strip() for p in s.split("+") if p.strip()]
+        for p in parts:
+            normalized = "System" if p.lower() == "system" else p
+            key = normalized.lower()
+            if key not in seen:
+                seen.add(key)
+                ordered.append(normalized)
+    return " + ".join(ordered) if ordered else None
 
 
 def extract_title_authors_year_from_bytes(pdf_bytes: bytes) -> Tuple[Optional[str], Optional[List[str]], Optional[str]]:
@@ -332,17 +356,19 @@ def render_first_page_thumbnail(pdf_bytes: bytes, out_path: Path, zoom: float = 
         pix.save(str(out_path))
 
 
-def system_abstract(text_first_pages: str) -> Optional[str]:
+def system_abstract_source(text_first_pages: str) -> Tuple[Optional[str], Optional[str]]:
     """
-    Extract an 'Abstract' block if present in the given text (first pages).
+    Extract an 'Abstract' block if present in the given text (first pages) AND
+    return a source tag. Source is 'System' when extracted locally.
+    Returns: (abstract_text or None, abstract_source or None)
     """
     if not text_first_pages:
-        return None
+        return None, None
 
     # Find 'Abstract' case-insensitive
     m = re.search(r"\babstract\b[:\s]*", text_first_pages, re.I)
     if not m:
-        return None
+        return None, None
 
     start = m.end()
     # Stop at common next section headers
@@ -358,4 +384,16 @@ def system_abstract(text_first_pages: str) -> Optional[str]:
     abstract = re.sub(r"[ \t]{2,}", " ", abstract)
     abstract = re.sub(r"\n{2,}", "\n", abstract)
 
-    return abstract[:4000] if abstract else None
+    abstract = abstract[:4000] if abstract else None
+    if abstract:
+        return abstract, "System"
+    return None, None
+
+
+def system_abstract(text_first_pages: str) -> Optional[str]:
+    """
+    Backward-compat wrapper: return only abstract text (no source).
+    Prefer system_abstract_source(...) if you need the source tag.
+    """
+    abs_text, _src = system_abstract_source(text_first_pages)
+    return abs_text

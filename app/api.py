@@ -53,6 +53,7 @@ def _row_to_view(p: PaperORM) -> dict:
         "arxiv_id": p.arxiv_id,
         "venue": p.venue,
         "url": p.url,
+        "data_src": p.data_src,
 
         # extra aliases some UIs use
         "file": p.path,

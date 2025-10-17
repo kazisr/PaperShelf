@@ -120,17 +120,17 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser.
 
 ## 📊 Database Model
 
-| Field | Type | Description |
-|--------|------|-------------|
-| `id` | string | Unique paper ID (UUID) |
-| `file_hash` | string | MD5 of the PDF file |
-| `title` | string | Paper title |
+| Field          | Type | Description |
+|----------------|------|-------------|
+| `id`           | string | Unique paper ID (UUID) |
+| `file_hash`    | string | MD5 of the PDF file |
+| `title`        | string | Paper title |
 | `authors_json` | JSON text | Author list |
-| `year` | string | Publication year |
-| `abstract` | text | Extracted abstract |
-| `abstract_source` | string | e.g., “system” |
-| `path` | string | Relative path to PDF |
-| `thumb_path` | string | Thumbnail image path |
+| `year`         | string | Publication year |
+| `abstract`     | text | Extracted abstract |
+| `data_src`     | string | e.g., “system” |
+| `path`         | string | Relative path to PDF |
+| `thumb_path`   | string | Thumbnail image path |
 
 ---
 

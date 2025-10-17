@@ -85,7 +85,6 @@ async def index_pdf(
 
     first_pages_text = _read_first_pages_text(raw, max_pages=3)
     abstract_text = system_abstract(first_pages_text)
-    abstract_source = "system" if abstract_text else None
 
     # external metadata — tolerate failures
     meta = None
@@ -98,8 +97,14 @@ async def index_pdf(
     final_title = (meta.get("title") if meta and meta.get("title") else extracted_title) or "Untitled"
     final_authors = (meta.get("authors") if meta and meta.get("authors") else extracted_authors) or []
     final_year = (meta.get("year") if meta and meta.get("year") else extracted_year) or None
-    if not abstract_text and meta and meta.get("abstract"):
-        abstract_text = meta["abstract"]; abstract_source = abstract_source or "external"
+    # print("META ->",meta)
+    if meta and meta.get("abstract") and meta.get("title") and meta.get("authors") and meta.get("year"):
+        data_src = "external"
+        abstract_text = meta.get("abstract")
+
+    if meta.get("abstract") or meta.get("title") or meta.get("year") or meta.get("authors"):
+        data_src =  "system and external"
+    else: data_src = "system"
 
     # -------- Thumbnail (prefer embedded image; else top half) --------
     THUMBS_DIR.mkdir(parents=True, exist_ok=True)
@@ -134,7 +139,7 @@ async def index_pdf(
         paper.authors_json = json.dumps(final_authors or [], ensure_ascii=False)
         paper.year = str(final_year) if final_year else None
         paper.abstract = abstract_text
-        paper.abstract_source = abstract_source
+        paper.data_src = data_src
         paper.path = relative_path
         paper.thumb_path = thumb_rel
 

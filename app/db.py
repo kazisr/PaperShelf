@@ -40,7 +40,7 @@ class PaperORM(Base):
     year = Column(String, nullable=True)
 
     abstract = Column(Text, nullable=True)
-    abstract_source = Column(String, nullable=True)
+    data_src = Column(String, nullable=True)
 
     path = Column(String, nullable=True)                  # e.g. "uploads/foo.pdf"
     thumb_path = Column(String, nullable=True)            # e.g. "thumbs/foo.png"
