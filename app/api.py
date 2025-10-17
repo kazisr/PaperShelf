@@ -1,13 +1,11 @@
 import hashlib
 import json
-from pathlib import Path
-
 from fastapi import FastAPI, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from .config import BASE_DIR, DATA_DIR, UPLOADS_DIR, THUMBS_DIR, TEMPLATES_DIR
+from .config import DATA_DIR, UPLOADS_DIR, THUMBS_DIR, TEMPLATES_DIR
 from .db import Session, PaperORM, init_db
 from .services.indexer import index_pdf
 from .utils.pdf_tools import file_safe, extract_title_authors_year_from_bytes
