@@ -268,12 +268,23 @@ def _save_low_quality(img: "Image.Image", out_path: Path, *, max_width: int = 40
         q.save(str(out_path), format="PNG", optimize=True)
 
 
-def _best_image_pixmap(doc: fitz.Document, page: fitz.Page, min_pixels: int = 150 * 150) -> Optional[fitz.Pixmap]:
+def _best_image_pixmap(
+    doc: fitz.Document,
+    page: fitz.Page,
+    *,
+    min_pixels: int = 250_000,
+    min_wh: Tuple[int, int] = (300, 200),
+    ar_range: Tuple[float, float] = (0.33, 3.0),
+) -> Optional[fitz.Pixmap]:
     """
-    Return the largest embedded raster image on the page as Pixmap, normalized to RGB.
-    More permissive thresholds to catch more images.
+    Pick the largest *usable* embedded raster image on a page.
+    Rules / standard:
+      - minimum pixel area (default ≥ 250k px)
+      - minimum width/height (default ≥ 300×200)
+      - aspect ratio within [0.33, 3.0] (avoid tall logos / long strips)
+      - normalize to opaque RGB (drop alpha / CMYK → RGB) for better compatibility
     """
-    best = None
+    best: Optional[fitz.Pixmap] = None
     best_area = 0
 
     for info in page.get_images(full=True):
@@ -283,17 +294,23 @@ def _best_image_pixmap(doc: fitz.Document, page: fitz.Page, min_pixels: int = 15
         except Exception:
             continue
 
-        area = pix.width * pix.height
-        if area < min_pixels:
+        w, h = pix.width, pix.height
+        area = w * h
+        if area < min_pixels or w < min_wh[0] or h < min_wh[1]:
             continue
 
-        # Normalize to RGB without alpha (smaller, more compatible)
+        ar = (w / h) if h else 0.0
+        if not (ar_range[0] <= ar <= ar_range[1]):
+            continue
+
+        # Normalize to RGB without alpha (smaller, widely supported)
         try:
             if pix.colorspace is not None and getattr(pix.colorspace, "n", 3) > 3:
                 pix = fitz.Pixmap(fitz.csRGB, pix)
-            elif pix.alpha:
+            elif getattr(pix, "alpha", 0):
                 pix = fitz.Pixmap(fitz.csRGB, pix)
         except Exception:
+            # Best-effort: if normalization fails, still consider original pix
             pass
 
         if area > best_area:
@@ -316,10 +333,10 @@ def render_thumbnail(
     pdf_bytes: bytes,
     out_path: Path,
     *,
-    search_pages: int = 5,          # scan more pages for images
-    min_image_pixels: int = 150 * 150,
-    zoom: float = 1.5,              # lower zoom for speed/smaller fallback
-    top_ratio: float = 0.5,
+    search_pages: int = 5,          # scan first N pages for embedded images
+    min_image_pixels: int = 250_000,
+    zoom: float = 1.8,              # slightly higher for clearer fallback crop
+    top_ratio: float = 0.4,         # render top 40% to match UI header band
     max_width: int = 400,
     jpeg_quality: int = 28,         # very low
 ) -> None:
@@ -344,7 +361,7 @@ def render_thumbnail(
         best_area = 0
         for i in range(pages_to_scan):
             page = doc[i]
-            pix = _best_image_pixmap(doc, page, min_pixels=min_image_pixels)
+            pix = _best_image_pixmap(doc, page, min_pixels=min_image_pixels, min_wh=(300, 200), ar_range=(0.33, 3.0))
             if pix is None:
                 continue
             area = pix.width * pix.height
@@ -353,7 +370,7 @@ def render_thumbnail(
                 best_area = area
 
         if best_pix is None:
-            # 2) Fallback: top-half render of page 1
+            # 2) Fallback: render the top portion (top_ratio, default 40%) of page 1
             best_pix = _render_top_half(doc[0], zoom=zoom, top_ratio=top_ratio)
 
     # 3) Save small
@@ -366,7 +383,7 @@ def render_thumbnail(
         best_pix.save(str(out_path))
 
 
-def render_first_page_thumbnail(pdf_bytes: bytes, out_path: Path, zoom: float = 1.5, top_ratio: float = 0.5) -> None:
+def render_first_page_thumbnail(pdf_bytes: bytes, out_path: Path, zoom: float = 1.8, top_ratio: float = 0.4) -> None:
     """
     Backward-compat wrapper — renders TOP portion of page 1, saved small.
     """
