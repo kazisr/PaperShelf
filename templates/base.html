@@ -1,37 +1,119 @@
-<!doctype html>
-<html lang="en" class="h-full">
+<!DOCTYPE html>
+<html lang="en" class="h-full" data-theme="light">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>{% block title %}PaperShelf{% endblock %}</title>
 
-  <!-- Tailwind (CDN) -->
+  <!-- Tailwind (CDN). If you build Tailwind yourself, replace with your compiled CSS. -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Alpine (for small interactivity in cards) -->
-  <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
-  <style>
-    /* line clamp utility if not using plugin */
-    .line-clamp-2 { display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-    .line-clamp-3 { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
-  </style>
-
-  {% block head %}{% endblock %}
+  <script>
+    // Respect saved choice or system preference on first paint
+    (function () {
+      try {
+        const saved = localStorage.getItem('papershelf-theme');
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark = saved ? saved === 'dark' : prefersDark;
+        if (isDark) document.documentElement.classList.add('dark');
+      } catch (_) {}
+    })();
+  </script>
+  <script>
+    tailwind.config = { darkMode: 'class' }
+  </script>
+  {% block head_extra %}{% endblock %}
 </head>
-<body class="h-full bg-gray-50 text-gray-900">
-  <header class="bg-white shadow">
-    <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-      <h1 class="text-xl font-semibold">📚 PaperShelf</h1>
-      <nav class="text-sm text-gray-600">
-        <a href="/" class="hover:underline">Home</a>
-      </nav>
+
+<body class="min-h-full bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100">
+  <!-- Header -->
+  <header class="sticky top-0 z-20 border-b border-slate-200/70 bg-white/90 dark:bg-slate-900/80 backdrop-blur supports-[backdrop-filter]:backdrop-blur">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
+      <a href="/" class="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white">📚 PaperShelf</a>
+
+      <div class="flex items-center gap-3">
+        {% block header_right %}{% endblock %}
+            <!-- Slim, centered theme toggle -->
+            <button
+              id="themeToggle"
+              type="button"
+              class="relative inline-flex h-8 w-16 items-center rounded-full border border-slate-300 dark:border-slate-700
+                     bg-slate-100 dark:bg-slate-800 shadow-inner transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+              aria-label="Toggle theme"
+              aria-pressed="false"
+              title="Toggle theme (t)"
+            >
+              <!-- Track icons (perfectly centered in each half) -->
+              <div class="pointer-events-none absolute inset-0 grid grid-cols-2 place-items-center">
+                <!-- Left track icon: SUN (only in dark, faint) -->
+                <svg class="h-4 w-4 text-amber-300/60 opacity-0 dark:opacity-100 transition-opacity duration-200"
+                     viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 4.75a.75.75 0 0 1 .75-.75h0a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5ZM12 17.75a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5a.75.75 0 0 1 .75-.75ZM5.47 6.53a.75.75 0 0 1 1.06-1.06l1.06 1.06a.75.75 0 1 1-1.06 1.06L5.47 6.53Zm9.94 9.94a.75.75 0 0 1 1.06 0l1.06 1.06a.75.75 0 1 1-1.06 1.06l-1.06-1.06a.75.75 0 0 1 0-1.06ZM4.75 12a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5H5.5A.75.75 0 0 1 4.75 12Zm11.75-.75h1.5a.75.75 0 0 1 0 1.5H16.5a.75.75 0 0 1 0-1.5ZM6.53 18.53a.75.75 0 0 1 0-1.06l1.06-1.06a.75.75 0 0 1 1.06 1.06L7.59 18.53a.75.75 0 0 1-1.06 0Zm9.94-12.94 1.06-1.06a.75.75 0 1 1 1.06 1.06l-1.06 1.06a.75.75 0 1 1-1.06-1.06ZM12 7.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z"/>
+                </svg>
+                <!-- Right track icon: MOON (only in light, faint) -->
+                <svg class="h-4 w-4 text-slate-400 opacity-100 dark:opacity-0 transition-opacity duration-200"
+                     viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 1 0 9.79 9.79Z"/>
+                </svg>
+              </div>
+
+              <!-- Knob (centered vertically; slides exactly 20px) -->
+              <span
+                class="absolute left-1 top-1/2 -translate-y-1/2 inline-flex h-6 w-6 items-center justify-center rounded-full shadow
+                       bg-gradient-to-b from-amber-400 to-amber-500 text-white
+                       transition-transform duration-300 ease-in-out
+                       dark:from-indigo-500 dark:to-indigo-600 dark:translate-x-[29px]"
+              >
+                <!-- Icon inside knob swaps with theme -->
+                <svg class="h-4 w-4 dark:hidden transition-opacity duration-200" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+                  <path d="M12 4.75a.75.75 0 0 1 .75-.75h0a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5ZM12 17.75a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5a.75.75 0 0 1 .75-.75ZM5.47 6.53a.75.75 0 0 1 1.06-1.06l1.06 1.06a.75.75 0 1 1-1.06 1.06L5.47 6.53Zm9.94 9.94a.75.75 0 0 1 1.06 0l1.06 1.06a.75.75 0 1 1-1.06 1.06l-1.06-1.06a.75.75 0 0 1 0-1.06ZM12 7.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z"/>
+                </svg>
+                <svg class="h-4 w-4 hidden dark:block transition-opacity duration-200" viewBox="0 0 24 24" fill="white" aria-hidden="true">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 1 0 9.79 9.79Z"/>
+                </svg>
+              </span>
+            </button>
+      </div>
     </div>
   </header>
 
-  <main class="max-w-7xl mx-auto px-4 py-6">
+  <main class="max-w-6xl mx-auto px-4 py-6">
     {% block content %}{% endblock %}
   </main>
 
-  {% block scripts %}{% endblock %}
+  <script>
+    (function () {
+      const root = document.documentElement;
+      const btn  = document.getElementById('themeToggle');
+
+      function setPressed() {
+        const isDark = root.classList.contains('dark');
+        btn.setAttribute('aria-pressed', String(isDark));
+      }
+
+      function applyTheme(willDark) {
+        root.classList.toggle('dark', willDark);
+        try { localStorage.setItem('papershelf-theme', willDark ? 'dark' : 'light'); } catch (_) {}
+        setPressed();
+      }
+
+      // Initialize aria-pressed correctly
+      setPressed();
+
+      // Click to toggle
+      btn?.addEventListener('click', () => {
+        applyTheme(!root.classList.contains('dark'));
+      });
+
+      // Keyboard shortcut: press "t" anywhere to toggle
+      window.addEventListener('keydown', (e) => {
+        if (e.key.toLowerCase() === 't' && !/input|textarea|select/i.test(e.target.tagName)) {
+          e.preventDefault();
+          applyTheme(!root.classList.contains('dark'));
+        }
+      });
+    })();
+  </script>
+
+  {% block body_end %}{% endblock %}
 </body>
 </html>

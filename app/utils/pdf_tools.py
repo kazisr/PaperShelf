@@ -163,17 +163,44 @@ def extract_title_authors_year_from_bytes(pdf_bytes: bytes) -> Tuple[Optional[st
 
                 if possible:
                     joined = " ".join(possible)
+
+                    # Drop any leading non-name fragment (e.g., leftover title words before first proper name)
+                    mfirst = re.search(r"[A-Z][a-z]+(?:\s+[A-Z]\.)?(?:\s+[A-Z][a-z]+)+", joined)
+                    if mfirst:
+                        joined = joined[mfirst.start():]
+
+                    # Split on commas / "and" / semicolons
                     parts = re.split(r"\s*,\s*|\s+and\s+|;", joined)
-                    names = [a.strip() for a in parts if a.strip()]
-                    names = [a for a in names if re.search(r"[A-Z][a-z]+", a) and len(a) <= 60]
-                    # Deduplicate (case-insensitive)
-                    seen = set()
+
+                    cleaned: List[str] = []
+                    for a in parts:
+                        a = a.strip()
+                        if not a:
+                            continue
+                        # remove numeric/superscript-like suffixes (e.g., "Ahmed1", "Saif2")
+                        a = re.sub(r"\b\d+\b", "", a)
+                        a = re.sub(r"([A-Za-z])\d+", r"\1", a)
+                        # normalize spaces and strip trailing punctuation
+                        a = re.sub(r"\s{2,}", " ", a)
+                        a = a.strip(",; ").strip()
+                        # must look like a person name (Firstname [M.] Lastname [Lastname...])
+                        if not re.search(r"[A-Z][a-z]+(?:\s+[A-Z]\.)?(?:\s+[A-Z][a-z]+)+", a):
+                            continue
+                        # avoid common leftover title words erroneously captured as names
+                        if re.match(r"^(Accidents|Paper|Study|Analysis|Investigation|Performance|Evaluation|Design|Development)\b", a, re.I):
+                            continue
+                        # keep
+                        cleaned.append(a)
+
+                    # Deduplicate (case-insensitive, alphas only) and cap to 10
+                    seen: set[str] = set()
                     uniq: List[str] = []
-                    for a in names:
-                        k = a.lower()
-                        if k not in seen:
-                            seen.add(k)
+                    for a in cleaned:
+                        key = re.sub(r"[^a-z]", "", a.lower())
+                        if key not in seen:
+                            seen.add(key)
                             uniq.append(a)
+
                     authors = uniq[:10] or None
 
             # Year: search first two pages' plain text

@@ -1,115 +1,144 @@
-<div style="border-radius: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.06); background: #ffffff; overflow: hidden; border: 1px solid #e5e7eb; display: flex; flex-direction: column; height: auto; transition: box-shadow 140ms ease, transform 140ms ease;" data-paper-card onmouseenter="this.style.boxShadow='0 6px 20px rgba(0,0,0,0.10)'; this.style.transform='translateY(-1px)';" onmouseleave="this.style.boxShadow='0 1px 4px rgba(0,0,0,0.06)'; this.style.transform='none';">
-  <div style="height: 40%; min-height: 120px; background: linear-gradient(180deg,#f9fafb 0%, #f3f4f6 100%); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #eef2f7; overflow: hidden;">
+<div
+  class="rounded-2xl shadow-sm hover:shadow-lg overflow-hidden flex flex-col h-auto border transition duration-150 ease-out
+         bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+  data-paper-card
+  onmouseenter="this.style.transform='translateY(-1px)';"
+  onmouseleave="this.style.transform='none';"
+>
+  <!-- Thumbnail -->
+  <div
+    class="flex items-center justify-center overflow-hidden border-b border-gray-200 dark:border-slate-700 bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800"
+    style="height:40%;min-height:120px;"
+  >
     {% if paper.thumb_path %}
       <img
         src="/media/{{ paper.thumb_path }}"
         alt="{{ paper.title }}"
         loading="lazy"
-        style="width: 100%; height: 100%; object-fit: cover; display: block;"
+        class="w-full h-full object-cover"
       />
     {% else %}
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width: 64px; height: 64px; opacity: 0.4;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+           class="w-16 h-16 text-slate-400 dark:text-slate-500 opacity-40">
         <path fill="currentColor" d="M6 2h7l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm7 1.5V8h4.5L13 3.5z"/>
       </svg>
     {% endif %}
   </div>
-  <div style="padding: 16px; display: flex; flex-direction: column; flex: 1 1 auto; gap: 8px;">
-    <h3 style="font-size: 1rem; font-weight: 700; line-height: 1.4; margin: 0;">
-      <a href="{{ paper.url or ('/media/' + paper.path) }}" target="_blank" style="color: #111827; text-decoration: none; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+
+  <!-- Card Body -->
+  <div class="flex flex-col flex-1 p-4 gap-2">
+    <!-- Title -->
+    <h3 class="text-base font-bold leading-snug m-0">
+      <a href="{{ paper.url or ('/media/' + paper.path) }}" target="_blank"
+         class="text-slate-900 dark:text-slate-50 hover:text-blue-600 dark:hover:text-blue-300 transition line-clamp-2">
         {{ paper.title }}
       </a>
     </h3>
 
-    <div style="margin-top: 6px; font-size: 0.875rem; color: #4b5563; display: flex; align-items: center; gap: 8px;">
-      <div style="flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+    <!-- Authors -->
+    <div class="mt-1 text-sm flex items-center gap-2 text-slate-600 dark:text-slate-200">
+      <div class="min-w-0 flex-1 overflow-hidden">
         {% set authors = paper.authors or [] %}
         {% if authors|length > 0 %}
           <span title="{{ authors|join(', ') }}">{{ authors|join(', ') }}</span>
         {% else %}
-          <span style="opacity: 0.6;">Unknown author</span>
+          <span class="opacity-70">Unknown author</span>
         {% endif %}
       </div>
-      {% if paper.year %}
-        <span style="flex: 0 0 auto; padding: 2px 8px; border-radius: 9999px; background: #eef2ff; color: #3730a3; font-size: 0.75rem; font-weight: 600;">{{ paper.year }}</span>
-      {% endif %}
     </div>
 
-    <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; font-size: 0.75rem;">
+    <!-- Year / Venue / Source -->
+    <div class="flex flex-wrap gap-2 mt-2 text-xs">
       {% if paper.venue %}
-        <span style="padding: 3px 10px; border-radius: 9999px; background: #f3f4f6; color: #374151; font-weight: 500;">{{ paper.venue }}</span>
+        <span class="inline-flex items-center rounded-full px-3 py-1 font-medium
+                     bg-slate-100 text-slate-700 dark:bg-slate-600/40 dark:text-slate-100 dark:ring-1 dark:ring-slate-500/40">
+          {{ paper.venue }}
+        </span>
+      {% endif %}
+      {% if paper.year %}
+        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 font-semibold
+                     bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200 dark:ring-1 dark:ring-indigo-400/30">
+          {{ paper.year }}
+        </span>
       {% endif %}
       {% if paper.data_src %}
-        <span style="padding: 3px 10px; border-radius: 9999px; background: #e0e7ff; color: #3730a3; font-weight: 600;">
+        <span class="inline-flex items-center rounded-full px-3 py-1 font-semibold
+                     bg-indigo-100 text-indigo-700 dark:bg-sky-500/20 dark:text-sky-200 dark:ring-1 dark:ring-sky-400/30">
           {{ paper.data_src | title }}
         </span>
       {% endif %}
-<!--      {% if paper.arxiv_id %}-->
-<!--        <a href="https://arxiv.org/abs/{{ paper.arxiv_id }}" target="_blank"-->
-<!--           style="padding: 2px 8px; border-radius: 4px; background: #ffe4e6; color: #881337; text-decoration: none;">-->
-<!--          arXiv-->
-<!--        </a>-->
-<!--      {% endif %}-->
     </div>
 
+    <!-- Abstract -->
     {% if paper.abstract %}
-      <p style="margin-top: 12px; font-size: 0.9rem; color: #374151; line-height: 1.6;" data-abstract>
-        <!-- Collapsed (3-line clamp) -->
-        <span data-short style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">{{ paper.abstract }}</span>
-        <!-- Expanded (hidden by default) -->
-        <span data-full style="display: none;">{{ paper.abstract }}</span>
-
-        <!-- Toggle button -->
-        <button type="button" data-toggle
+      <div class="mt-3 text-[0.95rem] leading-relaxed text-slate-700 dark:text-slate-200" data-abstract>
+        <p data-short class="line-clamp-3">
+          {{ paper.abstract }}
+        </p>
+        <p data-full class="hidden max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
+          {{ paper.abstract }}
+        </p>
+        <button
+          type="button"
+          data-toggle
           aria-expanded="false"
-          style="margin-left: 8px; color: #2563eb; background: none; border: none; cursor: pointer; text-decoration: underline; font-size: 0.875rem;">
+          class="mt-1 text-sm font-medium underline text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
+        >
           Read more
         </button>
-      </p>
+      </div>
     {% endif %}
 
-    <div style="margin-top: auto; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-      <div style="font-size: 0.75rem; color: #9ca3af;"></div>
-      <div style="display: inline-flex; gap: 8px;">
-        <a href="{{ paper.url or ('/media/' + paper.path) }}" target="_blank"
-           style="display: inline-flex; align-items: center; padding: 8px 14px; border-radius: 10px; background: #2563eb; color: #ffffff; text-decoration: none; font-size: 0.875rem; font-weight: 600; box-shadow: 0 1px 0 rgba(0,0,0,0.05);">
-          Open
-        </a>
-        <a href="/media/{{ paper.path }}" download
-           style="display: inline-flex; align-items: center; padding: 8px 14px; border-radius: 10px; background: #ffffff; color: #111827; text-decoration: none; font-size: 0.875rem; font-weight: 600; border: 1px solid #e5e7eb;">
-          Download
-        </a>
-      </div>
+    <!-- Actions -->
+    <div class="mt-auto flex items-center justify-end gap-2">
+      <a href="{{ paper.url or ('/media/' + paper.path) }}" target="_blank"
+         class="inline-flex items-center px-3.5 py-2 rounded-xl text-white text-sm font-semibold shadow-sm
+                bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500
+                dark:bg-blue-500 dark:hover:bg-blue-400">
+        Open
+      </a>
+      <a href="/media/{{ paper.path }}" download
+         class="inline-flex items-center px-3.5 py-2 rounded-xl text-sm font-semibold border
+                bg-white text-slate-800 hover:bg-slate-50
+                dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+        Download
+      </a>
     </div>
   </div>
 </div>
 
-<!-- Robust inline JS: waits for DOM ready and handles dynamically added cards -->
+<!-- Inline JS -->
 <script>
 (function () {
   function initOne(container) {
     if (!container || container.__abstractInit) return;
     container.__abstractInit = true;
 
-    var shortEl = container.querySelector('[data-short]');
-    var fullEl  = container.querySelector('[data-full]');
-    var btn     = container.querySelector('[data-toggle]');
+    const shortEl = container.querySelector('[data-short]');
+    const fullEl  = container.querySelector('[data-full]');
+    const btn     = container.querySelector('[data-toggle]');
     if (!shortEl || !fullEl || !btn) return;
 
-    btn.addEventListener('click', function () {
-      var expanded = btn.getAttribute('aria-expanded') === 'true';
+    btn.addEventListener('click', () => {
+      const expanded = btn.getAttribute('aria-expanded') === 'true';
       if (expanded) {
         // Collapse
-        fullEl.style.display  = 'none';
-        shortEl.style.display = '-webkit-box';
-        shortEl.style.webkitLineClamp = '3';
-        shortEl.style.webkitBoxOrient = 'vertical';
-        shortEl.style.overflow = 'hidden';
+        fullEl.classList.add('max-h-0', 'opacity-0');
+        fullEl.classList.remove('max-h-[500px]', 'opacity-100');
+        setTimeout(() => {
+          fullEl.classList.add('hidden');
+          shortEl.classList.remove('hidden');
+        }, 200);
         btn.textContent = 'Read more';
         btn.setAttribute('aria-expanded', 'false');
       } else {
         // Expand
-        fullEl.style.display  = 'inline';
-        shortEl.style.display = 'none';
+        shortEl.classList.add('hidden');
+        fullEl.classList.remove('hidden');
+        setTimeout(() => {
+          fullEl.classList.add('max-h-[500px]', 'opacity-100');
+          fullEl.classList.remove('max-h-0', 'opacity-0');
+        }, 10);
         btn.textContent = 'Show less';
         btn.setAttribute('aria-expanded', 'true');
       }
@@ -120,23 +149,20 @@
     (root || document).querySelectorAll('[data-abstract]').forEach(initOne);
   }
 
-  // Ensure it runs after DOM is ready
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { initAll(document); });
+    document.addEventListener('DOMContentLoaded', () => initAll(document));
   } else {
     initAll(document);
   }
 
-  // Also handle cards injected later (SPA / HTMX / Turbo / Alpine, etc.)
-  var mo = new MutationObserver(function (mutations) {
-    mutations.forEach(function (m) {
-      m.addedNodes.forEach(function (node) {
+  new MutationObserver(mutations => {
+    mutations.forEach(m => {
+      m.addedNodes.forEach(node => {
         if (!(node instanceof Element)) return;
-        if (node.matches && node.matches('[data-abstract]')) initOne(node);
-        node.querySelectorAll && node.querySelectorAll('[data-abstract]').forEach(initOne);
+        if (node.matches?.('[data-abstract]')) initOne(node);
+        node.querySelectorAll?.('[data-abstract]').forEach(initOne);
       });
     });
-  });
-  mo.observe(document.documentElement || document.body, { childList: true, subtree: true });
+  }).observe(document.body, { childList: true, subtree: true });
 })();
 </script>

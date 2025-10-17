@@ -1,102 +1,79 @@
 {% extends "base.html" %}
-{% block content %}
-<div class="bg-white p-6 rounded-2xl shadow-xl mb-6 border border-gray-100">
+{% block title %}PaperShelf Library{% endblock %}
 
+{% block content %}
+
+<!-- Top panel -->
+<div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-6 mb-6">
+  <!-- Search -->
   <form method="get" class="flex gap-3 mb-4">
     <div class="relative flex-1">
-      <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg class="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 7 0 11-14 0 7 7 0 0114 0z" />
       </svg>
       <input
         name="q"
         value="{{ q }}"
         placeholder="Search by title or abstract..."
-        class="w-full border border-gray-300 rounded-xl px-10 py-3 text-gray-700 focus:ring-blue-500 focus:border-blue-500 transition duration-150"
+        class="w-full border border-slate-300 dark:border-slate-600 rounded-xl pl-10 pr-4 py-3 text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
         oninput="liveSearch(this.value)"
       />
     </div>
   </form>
 
+  <!-- Toolbar -->
   <div class="flex items-center justify-between flex-wrap gap-4">
-
     <div class="flex items-center gap-3">
-      <label class="px-4 py-2 rounded-xl text-white font-medium cursor-pointer bg-blue-600 hover:bg-blue-700 shadow-md transition duration-150 ease-in-out">
+      <label for="folderPicker"
+             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-blue-600 text-white bg-blue-600 hover:bg-blue-700 font-semibold shadow-sm cursor-pointer transition">
         Select Folder 📂
-        <input id="folderPicker" type="file" webkitdirectory directory multiple hidden />
       </label>
+      <input id="folderPicker" type="file" webkitdirectory directory multiple hidden />
 
-      <div id="progressWrap" class="hidden min-w-[260px] ml-4">
-        <div class="text-sm text-gray-600 mb-1">
+      <div id="progressWrap" class="hidden min-w-[260px] ml-1">
+        <div class="text-sm text-slate-600 dark:text-slate-300 mb-1">
           <span id="progressText">Preparing…</span>
         </div>
-        <div class="w-64 bg-gray-200 rounded-full h-2 overflow-hidden shadow-inner">
+        <div class="w-64 bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden shadow-inner">
           <div id="progressBar" class="h-2 bg-blue-600 rounded-full transition-all duration-300" style="width:0%"></div>
         </div>
       </div>
     </div>
 
     <form method="post" action="/dev/clean" class="shrink-0">
-      <button class="px-4 py-2 rounded-xl border border-red-500 text-red-600 hover:bg-red-50 font-medium transition duration-150 ease-in-out">
+      <button class="px-4 py-2 rounded-xl border border-red-500 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 font-medium transition">
         🧹 Clean DB & Files (Dev)
       </button>
     </form>
   </div>
 </div>
 
-<!-- keep your hidden template (unused now, but harmless) -->
-<div id="card-template" class="hidden">
-  <div class="group bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden flex flex-col h-full">
-    <div class="relative h-48 bg-gray-100 flex items-center justify-center overflow-hidden">
-      <img class="thumb-img w-full h-full object-cover" alt="thumbnail" src="/static/no_thumb.png" />
-      <a class="chip-open absolute top-3 right-3 inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-sm px-3 py-1 text-xs font-semibold text-blue-700 ring-1 ring-blue-100 hover:bg-white shadow-md transition" target="_blank">Open Full Text</a>
-    </div>
-    <div class="p-5 flex flex-col gap-2 flex-grow">
-      <a class="card-title text-lg font-extrabold text-gray-900 leading-snug hover:text-blue-600 transition line-clamp-2" target="_blank">Untitled Paper Title</a>
-
-      <div class="flex items-center gap-2 text-xs font-medium">
-        <span class="year-badge inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-3 py-1 shadow-sm">—</span>
-        <span class="src-badge inline-flex items-center rounded-full bg-gray-100 text-gray-600 px-3 py-1 shadow-sm">Auto Source</span>
-      </div>
-
-      <div class="card-authors text-sm text-gray-600 mt-1 line-clamp-2">Author 1, Author 2, Author 3</div>
-      <div class="card-abstract text-sm text-gray-700 leading-relaxed line-clamp-4 mt-2">A snippet of the paper's abstract…</div>
-    </div>
-    <div class="px-5 pb-5 mt-auto flex justify-end">
-      <a class="card-open inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-800 transition" target="_blank">
-        View PDF
-        <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-        </svg>
-      </a>
-    </div>
-  </div>
-</div>
-
-<div id="cards" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+<!-- Cards grid -->
+<div id="cards" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
   {% for p in papers %}
     {% set paper = p %}
     {% include "_paper_card.html" %}
   {% else %}
 
-    <div id="drop" x-data
-     @dragover.prevent.delay.100="$el.classList.add('bg-blue-50', 'border-blue-500')"
-     @dragleave.prevent.delay.100="$el.classList.remove('bg-blue-50', 'border-blue-500')"
-     @drop.prevent="
-       $el.classList.remove('bg-blue-50', 'border-blue-500');
-       const files = $event.dataTransfer.files;
-       for (const f of files) {
-         if (!f.name.toLowerCase().endsWith('.pdf')) continue;
-         const fd = new FormData();
-         fd.append('file', f);
-         fetch('/upload', { method:'POST', body:fd })
-           .then(() => refreshCards());
-       }
-     "
-     class="col-span-full mb-6 p-6 text-center border-4 border-dashed rounded-2xl border-gray-300 bg-gray-50 text-lg text-gray-500 transition duration-200 ease-in-out">
-  Drag & drop **PDF(s)** here to add 📥
-</div>
+    <!-- Drag & Drop only when there are no papers -->
+    <div id="drop"
+         x-data
+         @dragover.prevent.delay.100="$el.classList.add('bg-blue-50','border-blue-500')"
+         @dragleave.prevent.delay.100="$el.classList.remove('bg-blue-50','border-blue-500')"
+         @drop.prevent="
+           $el.classList.remove('bg-blue-50','border-blue-500');
+           const files = $event.dataTransfer.files;
+           for (const f of files) {
+             if (!f.name.toLowerCase().endsWith('.pdf')) continue;
+             const fd = new FormData();
+             fd.append('file', f);
+             fetch('/upload', { method:'POST', body:fd }).then(() => refreshCards());
+           }"
+         class="col-span-full mb-6 p-8 text-center border-4 border-dashed rounded-2xl border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-lg text-slate-600 dark:text-slate-300 transition">
+      Drag & drop <strong>PDF(s)</strong> here to add 📥
+    </div>
 
-    <div class="text-gray-500 text-lg p-8 border border-dashed rounded-xl col-span-full">
+    <div class="text-slate-500 dark:text-slate-300 text-lg p-8 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl col-span-full text-center">
       No papers yet. Select a folder or drop PDFs above to get started!
     </div>
   {% endfor %}
@@ -118,7 +95,6 @@
     progressWrap.classList.toggle('hidden', !show);
   }
 
-  // 👉 Replace grid with SSR-rendered HTML so card design is identical
   async function swapGridFromSSR(q) {
     const url = q ? `/?q=${encodeURIComponent(q)}` : '/';
     const res = await fetch(url, { headers: { 'X-Requested-With': 'fetch' }});
@@ -132,18 +108,12 @@
     }
   }
 
-  async function liveSearch(q) {
-    // Use the SSR swap so list always matches server template
-    await swapGridFromSSR(q);
-  }
-
+  async function liveSearch(q) { await swapGridFromSSR(q); }
   async function refreshCards() {
-    const qInput = document.querySelector('input[name="q"]');
-    const q = qInput ? qInput.value : '';
+    const q = (document.querySelector('input[name="q"]') || {}).value || '';
     await swapGridFromSSR(q);
   }
 
-  // 📁 Folder Upload Logic (unchanged)
   if (folderPicker) {
     folderPicker.addEventListener('change', async (e) => {
       const all = Array.from(e.target.files || []);
@@ -173,16 +143,13 @@
       setTimeout(async () => {
         showProgress(false);
         e.target.value = '';
-        // Keep your hard refresh too if you like. SSR swap already updates the grid.
         await refreshCards();
       }, 800);
     });
   }
 
-  // First load: ensure grid reflects current data via SSR (keeps look identical)
   document.addEventListener('DOMContentLoaded', async () => {
-    const qInput = document.querySelector('input[name="q"]');
-    const q = qInput ? qInput.value : '';
+    const q = (document.querySelector('input[name="q"]') || {}).value || '';
     await swapGridFromSSR(q);
   });
 </script>
