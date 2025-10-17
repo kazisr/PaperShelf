@@ -1,156 +1,82 @@
 {% extends "base.html" %}
-{% block title %}PaperShelf Library{% endblock %}
-
 {% block content %}
 
-<!-- Top panel -->
-<div class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm rounded-2xl p-6 mb-6">
-  <!-- Search -->
-  <form method="get" class="flex gap-3 mb-4">
+<!-- Search and Folder Upload -->
+<div class="bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-lg mb-6 border border-gray-100 dark:border-slate-700">
+  <form method="get" class="flex items-center gap-3">
+    <!-- Search Input -->
     <div class="relative flex-1">
-      <svg class="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 7 0 11-14 0 7 7 0 0114 0z" />
+      <svg class="w-5 h-5 text-gray-400 dark:text-slate-400 absolute left-3 top-1/2 transform -translate-y-1/2"
+           xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
       </svg>
       <input
         name="q"
         value="{{ q }}"
-        placeholder="Search by title or abstract..."
-        class="w-full border border-slate-300 dark:border-slate-600 rounded-xl pl-10 pr-4 py-3 text-slate-800 dark:text-slate-100 bg-white dark:bg-slate-800 placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+        placeholder="Search papers..."
+        class="w-full border border-gray-300 dark:border-slate-600 rounded-xl pl-10 pr-3 py-2 text-gray-700 dark:text-slate-100 dark:bg-slate-800 focus:ring-blue-500 focus:border-blue-500 transition duration-150"
         oninput="liveSearch(this.value)"
       />
     </div>
-  </form>
 
-  <!-- Toolbar -->
-  <div class="flex items-center justify-between flex-wrap gap-4">
-    <div class="flex items-center gap-3">
-      <label for="folderPicker"
-             class="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-blue-600 text-white bg-blue-600 hover:bg-blue-700 font-semibold shadow-sm cursor-pointer transition">
-        Select Folder 📂
-      </label>
+    <!-- Folder Select Icon Button -->
+    <label class="flex items-center justify-center w-10 h-10 rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md cursor-pointer transition">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 7h4l2 3h10a1 1 0 011 1v7a1 1 0 01-1 1H3V7z" />
+      </svg>
       <input id="folderPicker" type="file" webkitdirectory directory multiple hidden />
+    </label>
 
-      <div id="progressWrap" class="hidden min-w-[260px] ml-1">
-        <div class="text-sm text-slate-600 dark:text-slate-300 mb-1">
-          <span id="progressText">Preparing…</span>
-        </div>
-        <div class="w-64 bg-slate-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden shadow-inner">
-          <div id="progressBar" class="h-2 bg-blue-600 rounded-full transition-all duration-300" style="width:0%"></div>
-        </div>
-      </div>
-    </div>
-
+    <!-- Clean DB Icon Button -->
     <form method="post" action="/dev/clean" class="shrink-0">
-      <button class="px-4 py-2 rounded-xl border border-red-500 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 font-medium transition">
-        🧹 Clean DB & Files (Dev)
+      <button class="flex items-center justify-center w-10 h-10 rounded-xl border border-red-500 text-red-600 hover:bg-red-50 dark:hover:bg-red-950 transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5-3h4m-5 3h6" />
+        </svg>
       </button>
     </form>
+  </form>
+</div>
+
+<!-- Carousel for Papers -->
+{% if papers %}
+<div id="paperCarousel" class="relative w-full mt-6" data-carousel='{ "loadingClasses": "opacity-0", "slidesQty": { "xs": 1, "lg": 3 }, "isCentered": true, "isSnap": true }'>
+  <div class="carousel h-auto flex overflow-x-auto snap-x snap-mandatory scroll-smooth space-x-4 pb-3">
+    <div class="carousel-body flex h-full gap-4 opacity-0 animate-fade-in">
+      {% for paper in papers %}
+      <div class="carousel-slide snap-center shrink-0 w-80">
+        {% set paper = paper %}
+        {% include "_paper_card.html" %}
+      </div>
+      {% endfor %}
+    </div>
   </div>
+
+
 </div>
-
-<!-- Cards grid -->
-<div id="cards" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-  {% for p in papers %}
-    {% set paper = p %}
-    {% include "_paper_card.html" %}
-  {% else %}
-
-    <!-- Drag & Drop only when there are no papers -->
-    <div id="drop"
-         x-data
-         @dragover.prevent.delay.100="$el.classList.add('bg-blue-50','border-blue-500')"
-         @dragleave.prevent.delay.100="$el.classList.remove('bg-blue-50','border-blue-500')"
-         @drop.prevent="
-           $el.classList.remove('bg-blue-50','border-blue-500');
-           const files = $event.dataTransfer.files;
-           for (const f of files) {
-             if (!f.name.toLowerCase().endsWith('.pdf')) continue;
-             const fd = new FormData();
-             fd.append('file', f);
-             fetch('/upload', { method:'POST', body:fd }).then(() => refreshCards());
-           }"
-         class="col-span-full mb-6 p-8 text-center border-4 border-dashed rounded-2xl border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-lg text-slate-600 dark:text-slate-300 transition">
-      Drag & drop <strong>PDF(s)</strong> here to add 📥
-    </div>
-
-    <div class="text-slate-500 dark:text-slate-300 text-lg p-8 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl col-span-full text-center">
-      No papers yet. Select a folder or drop PDFs above to get started!
-    </div>
-  {% endfor %}
+{% else %}
+<div id="drop" x-data
+     @dragover.prevent.delay.100="$el.classList.add('bg-blue-50', 'border-blue-500')"
+     @dragleave.prevent.delay.100="$el.classList.remove('bg-blue-50', 'border-blue-500')"
+     @drop.prevent="
+       $el.classList.remove('bg-blue-50', 'border-blue-500');
+       const files = $event.dataTransfer.files;
+       for (const f of files) {
+         if (!f.name.toLowerCase().endsWith('.pdf')) continue;
+         const fd = new FormData();
+         fd.append('file', f);
+         fetch('/upload', { method:'POST', body:fd }).then(() => refreshCards());
+       }
+     "
+     class="col-span-full mb-6 p-6 text-center border-4 border-dashed rounded-2xl border-gray-300 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 text-lg text-gray-500 dark:text-slate-400 transition duration-200 ease-in-out">
+  Drag & drop <b>PDF(s)</b> here to add 📥
 </div>
+{% endif %}
 
-<script>
-  const folderPicker = document.getElementById('folderPicker');
-  const progressWrap = document.getElementById('progressWrap');
-  const progressText = document.getElementById('progressText');
-  const progressBar  = document.getElementById('progressBar');
+<style>
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.animate-fade-in { animation: fade-in 0.6s ease-out forwards; }
+</style>
 
-  function setProgress(done, total, name) {
-    const pct = total ? Math.round((done / total) * 100) : 0;
-    if (progressText) progressText.textContent = `Uploading ${done}/${total}${name ? ' – ' + name : ''}`;
-    if (progressBar)  progressBar.style.width = pct + '%';
-  }
-  function showProgress(show) {
-    if (!progressWrap) return;
-    progressWrap.classList.toggle('hidden', !show);
-  }
-
-  async function swapGridFromSSR(q) {
-    const url = q ? `/?q=${encodeURIComponent(q)}` : '/';
-    const res = await fetch(url, { headers: { 'X-Requested-With': 'fetch' }});
-    const html = await res.text();
-    const doc = new DOMParser().parseFromString(html, 'text/html');
-    const newCards = doc.querySelector('#cards');
-    const cardsDiv = document.getElementById('cards');
-    if (newCards && cardsDiv) {
-      cardsDiv.innerHTML = newCards.innerHTML;
-      if (window.Alpine) Alpine.initTree(cardsDiv);
-    }
-  }
-
-  async function liveSearch(q) { await swapGridFromSSR(q); }
-  async function refreshCards() {
-    const q = (document.querySelector('input[name="q"]') || {}).value || '';
-    await swapGridFromSSR(q);
-  }
-
-  if (folderPicker) {
-    folderPicker.addEventListener('change', async (e) => {
-      const all = Array.from(e.target.files || []);
-      const pdfs = all.filter(f => f.name.toLowerCase().endsWith('.pdf'));
-      if (!pdfs.length) return;
-
-      showProgress(true);
-      setProgress(0, pdfs.length, '');
-
-      let done = 0;
-      for (const f of pdfs) {
-        try {
-          setProgress(done, pdfs.length, f.name);
-          const fd = new FormData();
-          fd.append('file', f);
-          await fetch('/upload', { method: 'POST', body: fd });
-          await refreshCards();
-        } catch (err) {
-          console.error('Upload failed:', err);
-        } finally {
-          done += 1;
-          setProgress(done, pdfs.length, done < pdfs.length ? pdfs[done]?.name : '');
-        }
-      }
-
-      setProgress(pdfs.length, pdfs.length, 'Done');
-      setTimeout(async () => {
-        showProgress(false);
-        e.target.value = '';
-        await refreshCards();
-      }, 800);
-    });
-  }
-
-  document.addEventListener('DOMContentLoaded', async () => {
-    const q = (document.querySelector('input[name="q"]') || {}).value || '';
-    await swapGridFromSSR(q);
-  });
-</script>
 {% endblock %}

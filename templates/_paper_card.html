@@ -1,168 +1,211 @@
 <div
-  class="rounded-2xl shadow-sm hover:shadow-lg overflow-hidden flex flex-col h-auto border transition duration-150 ease-out
-         bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+  class="rounded-2xl shadow-sm hover:shadow-lg overflow-hidden flex flex-col h-[520px] sm:h-[540px] lg:h-[560px] border transition duration-150 ease-out
+         bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 [perspective:1000px]"
   data-paper-card
   onmouseenter="this.style.transform='translateY(-1px)';"
   onmouseleave="this.style.transform='none';"
 >
-  <!-- Thumbnail -->
-  <div
-    class="flex items-center justify-center overflow-hidden border-b border-gray-200 dark:border-slate-700 bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800"
-    style="height:40%;min-height:120px;"
-  >
-    {% if paper.thumb_path %}
-      <img
-        src="/media/{{ paper.thumb_path }}"
-        alt="{{ paper.title }}"
-        loading="lazy"
-        class="w-full h-full object-cover"
-      />
-    {% else %}
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
-           class="w-16 h-16 text-slate-400 dark:text-slate-500 opacity-40">
-        <path fill="currentColor" d="M6 2h7l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm7 1.5V8h4.5L13 3.5z"/>
-      </svg>
-    {% endif %}
-  </div>
-
-  <!-- Card Body -->
-  <div class="flex flex-col flex-1 p-4 gap-2">
-    <!-- Title -->
-    <h3 class="text-base font-bold leading-snug m-0">
-      <a href="{{ paper.url or ('/media/' + paper.path) }}" target="_blank"
-         class="text-slate-900 dark:text-slate-50 hover:text-blue-600 dark:hover:text-blue-300 transition line-clamp-2">
-        {{ paper.title }}
-      </a>
-    </h3>
-
-    <!-- Authors -->
-    <div class="mt-1 text-sm flex items-center gap-2 text-slate-600 dark:text-slate-200">
-      <div class="min-w-0 flex-1 overflow-hidden">
-        {% set authors = paper.authors or [] %}
-        {% if authors|length > 0 %}
-          <span title="{{ authors|join(', ') }}">{{ authors|join(', ') }}</span>
+  <!-- Flip Container -->
+  <div data-flip-inner class="relative w-full h-full [transform-style:preserve-3d] transition-transform duration-700 ease-out">
+    <!-- FRONT FACE -->
+    <div class="absolute inset-0 [backface-visibility:hidden]">
+      <!-- Thumbnail (front) -->
+      <div data-thumb class="relative flex items-center justify-center overflow-hidden border-b border-gray-200 dark:border-slate-700 bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 h-[40%] min-h-[120px]">
+        {% if paper.thumb_path %}
+          <img src="/media/{{ paper.thumb_path }}" alt="{{ paper.title }}" loading="lazy" class="w-full h-full object-cover" />
         {% else %}
-          <span class="opacity-70">Unknown author</span>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-16 h-16 text-slate-400 dark:text-slate-500 opacity-40">
+            <path fill="currentColor" d="M6 2h7l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm7 1.5V8h4.5L13 3.5z"/>
+          </svg>
+        {% endif %}
+        <!-- Download button (front) -->
+        <a
+          href="/media/{{ paper.path }}"
+          download
+          class="absolute top-2 right-2 inline-flex items-center justify-center w-9 h-9 rounded-full
+                 bg-blue-50/80 dark:bg-slate-900/50 backdrop-blur-sm border border-blue-200/60 dark:border-slate-700
+                 text-blue-600 dark:text-slate-100 shadow-sm hover:bg-blue-100 dark:hover:bg-slate-900/70
+                 transition"
+          aria-label="Download PDF"
+          title="Download PDF"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 3a1 1 0 011 1v8.586l2.293-2.293a1 1 0 111.414 1.414l-4.004 4.004a1 1 0 01-1.414 0L6.286 11.707a1 1 0 111.414-1.414L10 12.586V4a1 1 0 011-1zm-7 14a1 1 0 100 2h14a1 1 0 100-2H5z"/>
+          </svg>
+        </a>
+      </div>
+      <!-- Body (front) -->
+      <div class="flex flex-col flex-1 p-4 gap-2">
+        <h3 class="text-base font-bold leading-snug m-0 line-clamp-2">
+          <a href="{{ paper.url or ('/media/' + paper.path) }}" target="_blank" class="text-slate-900 dark:text-slate-50 hover:text-blue-600 dark:hover:text-blue-300 transition">
+            {{ paper.title }}
+          </a>
+        </h3>
+        <div class="mt-1 text-sm flex items-center gap-2 text-slate-600 dark:text-slate-200">
+          <div class="min-w-0 flex-1 overflow-hidden">
+            {% set authors = paper.authors or [] %}
+            {% if authors|length > 0 %}
+              <span title="{{ authors|join(', ') }}" class="block truncate">{{ authors|join(', ') }}</span>
+            {% else %}
+              <span class="opacity-70">Unknown author</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2 mt-2 text-xs">
+          {% if paper.venue %}
+            <span class="inline-flex items-center rounded-full px-3 py-1 font-medium bg-slate-100 text-slate-700 dark:bg-slate-600/40 dark:text-slate-100 dark:ring-1 dark:ring-slate-500/40">{{ paper.venue }}</span>
+          {% endif %}
+          {% if paper.year %}
+            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200 dark:ring-1 dark:ring-indigo-400/30">{{ paper.year }}</span>
+          {% endif %}
+          {% if paper.data_src %}
+            <span class="inline-flex items-center rounded-full px-3 py-1 font-semibold bg-indigo-100 text-indigo-700 dark:bg-sky-500/20 dark:text-sky-200 dark:ring-1 dark:ring-sky-400/30">{{ paper.data_src | title }}</span>
+          {% endif %}
+        </div>
+        {% if paper.abstract %}
+          <p class="mt-3 text-[0.95rem] leading-relaxed text-slate-700 dark:text-slate-200 line-clamp-3">
+            {{ paper.abstract }}
+          </p>
+          <div class="mt-auto flex items-center justify-end gap-2">
+            <button type="button" data-flip-open class="inline-flex items-center px-3.5 py-2 rounded-xl text-white text-sm font-semibold shadow-sm bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-blue-500 dark:hover:bg-blue-400">
+              Read more
+            </button>
+            <a href="{{ paper.url or ('/media/' + paper.path) }}" target="_blank" class="inline-flex items-center px-3.5 py-2 rounded-xl text-sm font-semibold border bg-white text-slate-800 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              Open
+            </a>
+          </div>
         {% endif %}
       </div>
     </div>
 
-    <!-- Year / Venue / Source -->
-    <div class="flex flex-wrap gap-2 mt-2 text-xs">
-      {% if paper.venue %}
-        <span class="inline-flex items-center rounded-full px-3 py-1 font-medium
-                     bg-slate-100 text-slate-700 dark:bg-slate-600/40 dark:text-slate-100 dark:ring-1 dark:ring-slate-500/40">
-          {{ paper.venue }}
-        </span>
-      {% endif %}
-      {% if paper.year %}
-        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 font-semibold
-                     bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200 dark:ring-1 dark:ring-indigo-400/30">
-          {{ paper.year }}
-        </span>
-      {% endif %}
-      {% if paper.data_src %}
-        <span class="inline-flex items-center rounded-full px-3 py-1 font-semibold
-                     bg-indigo-100 text-indigo-700 dark:bg-sky-500/20 dark:text-sky-200 dark:ring-1 dark:ring-sky-400/30">
-          {{ paper.data_src | title }}
-        </span>
-      {% endif %}
-    </div>
-
-    <!-- Abstract -->
-    {% if paper.abstract %}
-      <div class="mt-3 text-[0.95rem] leading-relaxed text-slate-700 dark:text-slate-200" data-abstract>
-        <p data-short class="line-clamp-3">
-          {{ paper.abstract }}
-        </p>
-        <p data-full class="hidden max-h-0 overflow-hidden transition-all duration-300 ease-in-out">
-          {{ paper.abstract }}
-        </p>
-        <button
-          type="button"
-          data-toggle
-          aria-expanded="false"
-          class="mt-1 text-sm font-medium underline text-blue-600 hover:text-blue-700 dark:text-blue-300 dark:hover:text-blue-200"
-        >
-          Read more
-        </button>
+    <!-- BACK FACE -->
+    <div class="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)]">
+      <!-- Back content is scrollable -->
+      <div data-back class="flex flex-col h-full overflow-y-auto overscroll-contain scroll-smooth">
+        <!-- Thumbnail (back, static banner) -->
+        <div data-thumb class="relative flex items-center justify-center overflow-hidden border-b border-gray-200 dark:border-slate-700 bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 h-[40%] min-h-[120px]">
+          {% if paper.thumb_path %}
+            <img src="/media/{{ paper.thumb_path }}" alt="{{ paper.title }}" loading="lazy" class="w-full h-full object-cover" />
+          {% else %}
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-16 h-16 text-slate-400 dark:text-slate-500 opacity-40">
+              <path fill="currentColor" d="M6 2h7l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm7 1.5V8h4.5L13 3.5z"/>
+            </svg>
+          {% endif %}
+          <!-- Download button (back) -->
+          <a
+            href="/media/{{ paper.path }}"
+            download
+            class="absolute top-2 right-2 inline-flex items-center justify-center w-9 h-9 rounded-full
+                   bg-blue-50/80 dark:bg-slate-900/50 backdrop-blur-sm border border-blue-200/60 dark:border-slate-700
+                   text-blue-600 dark:text-slate-100 shadow-sm hover:bg-blue-100 dark:hover:bg-slate-900/70
+                   transition"
+            aria-label="Download PDF"
+            title="Download PDF"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 3a1 1 0 011 1v8.586l2.293-2.293a1 1 0 111.414 1.414l-4.004 4.004a1 1 0 01-1.414 0L6.286 11.707a1 1 0 111.414-1.414L10 12.586V4a1 1 0 011-1zm-7 14a1 1 0 100 2h14a1 1 0 100-2H5z"/>
+            </svg>
+          </a>
+        </div>
+        <!-- Body (back) -->
+        <div class="flex flex-col flex-1 p-4 gap-2">
+          <h3 class="text-base font-bold leading-snug m-0">
+            <a href="{{ paper.url or ('/media/' + paper.path) }}" target="_blank" class="text-slate-900 dark:text-slate-50 hover:text-blue-600 dark:hover:text-blue-300 transition">
+              {{ paper.title }}
+            </a>
+          </h3>
+          <div class="mt-1 text-sm flex items-center gap-2 text-slate-600 dark:text-slate-200">
+            <div class="min-w-0 flex-1">
+              {% set authors = paper.authors or [] %}
+              {% if authors|length > 0 %}
+                <span title="{{ authors|join(', ') }}">{{ authors|join(', ') }}</span>
+              {% else %}
+                <span class="opacity-70">Unknown author</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-2 mt-2 text-xs">
+            {% if paper.venue %}
+              <span class="inline-flex items-center rounded-full px-3 py-1 font-medium bg-slate-100 text-slate-700 dark:bg-slate-600/40 dark:text-slate-100 dark:ring-1 dark:ring-slate-500/40">{{ paper.venue }}</span>
+            {% endif %}
+            {% if paper.year %}
+              <span class="inline-flex items-center rounded-full px-2.5 py-0.5 font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200 dark:ring-1 dark:ring-indigo-400/30">{{ paper.year }}</span>
+            {% endif %}
+            {% if paper.data_src %}
+              <span class="inline-flex items-center rounded-full px-3 py-1 font-semibold bg-indigo-100 text-indigo-700 dark:bg-sky-500/20 dark:text-sky-200 dark:ring-1 dark:ring-sky-400/30">{{ paper.data_src | title }}</span>
+            {% endif %}
+          </div>
+          {% if paper.abstract %}
+            <p class="mt-3 text-[0.95rem] leading-relaxed text-slate-700 dark:text-slate-200 whitespace-pre-line">
+              {{ paper.abstract }}
+            </p>
+          {% endif %}
+          <div class="mt-auto flex items-center justify-between gap-2 pt-2">
+            <button type="button" data-flip-close class="inline-flex items-center px-3.5 py-2 rounded-xl text-sm font-semibold border bg-white text-slate-800 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              Show less
+            </button>
+            <a href="{{ paper.url or ('/media/' + paper.path) }}" target="_blank" class="inline-flex items-center px-3.5 py-2 rounded-xl text-white text-sm font-semibold shadow-sm bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-blue-500 dark:hover:bg-blue-400">
+              Open
+            </a>
+          </div>
+        </div>
       </div>
-    {% endif %}
-
-    <!-- Actions -->
-    <div class="mt-auto flex items-center justify-end gap-2">
-      <a href="{{ paper.url or ('/media/' + paper.path) }}" target="_blank"
-         class="inline-flex items-center px-3.5 py-2 rounded-xl text-white text-sm font-semibold shadow-sm
-                bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500
-                dark:bg-blue-500 dark:hover:bg-blue-400">
-        Open
-      </a>
-      <a href="/media/{{ paper.path }}" download
-         class="inline-flex items-center px-3.5 py-2 rounded-xl text-sm font-semibold border
-                bg-white text-slate-800 hover:bg-slate-50
-                dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-        Download
-      </a>
     </div>
   </div>
 </div>
 
-<!-- Inline JS -->
 <script>
 (function () {
-  function initOne(container) {
-    if (!container || container.__abstractInit) return;
-    container.__abstractInit = true;
+  function initCard(root) {
+    if (!root || root.__flipInit) return;
+    root.__flipInit = true;
 
-    const shortEl = container.querySelector('[data-short]');
-    const fullEl  = container.querySelector('[data-full]');
-    const btn     = container.querySelector('[data-toggle]');
-    if (!shortEl || !fullEl || !btn) return;
+    const inner = root.querySelector('[data-flip-inner]');
+    const openBtn = root.querySelector('[data-flip-open]');
+    const closeBtn = root.querySelector('[data-flip-close]');
+    const back = root.querySelector('[data-back]');
+    const thumb = root.querySelector('[data-back] [data-thumb]') || root.querySelector('[data-thumb]');
 
-    btn.addEventListener('click', () => {
-      const expanded = btn.getAttribute('aria-expanded') === 'true';
-      if (expanded) {
-        // Collapse
-        fullEl.classList.add('max-h-0', 'opacity-0');
-        fullEl.classList.remove('max-h-[500px]', 'opacity-100');
-        setTimeout(() => {
-          fullEl.classList.add('hidden');
-          shortEl.classList.remove('hidden');
-        }, 200);
-        btn.textContent = 'Read more';
-        btn.setAttribute('aria-expanded', 'false');
-      } else {
-        // Expand
-        shortEl.classList.add('hidden');
-        fullEl.classList.remove('hidden');
-        setTimeout(() => {
-          fullEl.classList.add('max-h-[500px]', 'opacity-100');
-          fullEl.classList.remove('max-h-0', 'opacity-0');
-        }, 10);
-        btn.textContent = 'Show less';
-        btn.setAttribute('aria-expanded', 'true');
+    if (!inner) return;
+
+    function openFlip() {
+      inner.style.transform = 'rotateY(180deg)';
+      // After flip, scroll back face to start just below thumbnail
+      if (back) {
+        requestAnimationFrame(() => {
+          const y = thumb ? (thumb.offsetHeight + 1) : 0;
+          back.scrollTo({ top: y, behavior: 'smooth' });
+        });
       }
-    });
+    }
+
+    function closeFlip() {
+      inner.style.transform = '';
+      // Reset back scroll when closing
+      if (back) back.scrollTo({ top: 0, behavior: 'auto' });
+    }
+
+    openBtn && openBtn.addEventListener('click', openFlip);
+    closeBtn && closeBtn.addEventListener('click', closeFlip);
   }
 
-  function initAll(root) {
-    (root || document).querySelectorAll('[data-abstract]').forEach(initOne);
+  function initAll() {
+    document.querySelectorAll('[data-paper-card]').forEach(initCard);
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => initAll(document));
+    document.addEventListener('DOMContentLoaded', initAll);
   } else {
-    initAll(document);
+    initAll();
   }
 
-  new MutationObserver(mutations => {
-    mutations.forEach(m => {
-      m.addedNodes.forEach(node => {
-        if (!(node instanceof Element)) return;
-        if (node.matches?.('[data-abstract]')) initOne(node);
-        node.querySelectorAll?.('[data-abstract]').forEach(initOne);
-      });
-    });
+  // Re-init for dynamically added cards
+  new MutationObserver(muts => {
+    muts.forEach(m => m.addedNodes.forEach(n => {
+      if (!(n instanceof Element)) return;
+      if (n.matches?.('[data-paper-card]')) initCard(n);
+      n.querySelectorAll?.('[data-paper-card]').forEach(initCard);
+    }));
   }).observe(document.body, { childList: true, subtree: true });
 })();
 </script>

@@ -105,7 +105,6 @@ def home(request: Request, q: Optional[str] = None):
         "q": q or "",
         "count": len(items),
     }
-    print(context)
     return templates.TemplateResponse("index.html", context)
 
 

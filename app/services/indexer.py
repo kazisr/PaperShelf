@@ -81,8 +81,6 @@ async def index_pdf(
     if not extracted_year and year_hint:
         extracted_year = year_hint
 
-    print(extracted_title, extracted_authors, extracted_year)
-
     first_pages_text = _read_first_pages_text(raw, max_pages=3)
     abstract_text = system_abstract(first_pages_text)
 
@@ -97,7 +95,6 @@ async def index_pdf(
     final_title = (meta.get("title") if meta and meta.get("title") else extracted_title) or "Untitled"
     final_authors = (meta.get("authors") if meta and meta.get("authors") else extracted_authors) or []
     final_year = (meta.get("year") if meta and meta.get("year") else extracted_year) or None
-    # print("META ->",meta)
     if meta and meta.get("abstract") and meta.get("title") and meta.get("authors") and meta.get("year"):
         data_src = "external"
         abstract_text = meta.get("abstract")
