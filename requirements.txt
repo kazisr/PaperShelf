@@ -3,9 +3,10 @@ uvicorn[standard]
 jinja2
 sqlalchemy
 aiosqlite
-pydantic
-PyMuPDF
 python-multipart
-watchdog
+PyMuPDF
 ocrmypdf
 pytesseract
+watchdog
+httpx>=0.27.0
+feedparser>=6.0.11
