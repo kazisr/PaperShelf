@@ -28,7 +28,27 @@
   <!-- Header -->
   <header class="sticky top-0 z-20 border-b border-slate-200/70 bg-white/90 dark:bg-slate-900/80 backdrop-blur supports-[backdrop-filter]:backdrop-blur">
     <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
-      <a href="/" class="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white">📚 PaperShelf</a>
+        <a href="/" class="font-semibold text-xl tracking-normal text-on-surface dark:text-on-surface-dark flex items-center gap-2">
+  <span aria-hidden="true"
+        class="inline-flex items-center justify-center size-9 md:size-10 rounded-full
+               bg-blue-600/15 dark:bg-sky-400/20 ring-1 ring-blue-700/20 dark:ring-sky-300/25
+               shadow-[inset_0_1px_0_rgba(255,255,255,0.3)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+    <!-- M3-style glyph: bookshelf in a circle, two-tone via currentColor/opacity -->
+    <svg class="size-5.5 md:size-6 text-blue-700 dark:text-sky-300" viewBox="0 0 24 24" fill="currentColor">
+      <!-- Shelf base -->
+      <rect x="3" y="17" width="18" height="2" rx="1" opacity="0.7" />
+      <!-- Book 1 -->
+      <rect x="5" y="6" width="3" height="10" rx="1" />
+      <!-- Book 2 (taller) -->
+      <rect x="9" y="4.5" width="3" height="11.5" rx="1" opacity="0.9" />
+      <!-- Book 3 (leaning) -->
+      <g transform="translate(0,0) rotate(-8 16 11)">
+        <rect x="15" y="6.5" width="3" height="9.5" rx="1" />
+      </g>
+    </svg>
+  </span>
+  PaperShelf
+</a>
 
       <div class="flex items-center gap-3">
         {% block header_right %}{% endblock %}
