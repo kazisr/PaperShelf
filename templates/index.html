@@ -103,6 +103,15 @@ block content %}
   {% endfor %}
 </div>
 
+<!-- Global Drag & Drop Overlay (appears on drag, hidden otherwise) -->
+<div id="dropOverlay"
+     class="hidden fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center">
+  <div class="rounded-2xl border-2 border-dashed border-white/50 p-10 text-center text-white max-w-lg mx-auto">
+    <div class="text-2xl font-semibold mb-2">Drop PDF(s) to Upload</div>
+    <div class="text-sm opacity-80">Release to start uploading. Non-PDF files will be ignored.</div>
+  </div>
+</div>
+
 <script>
   const folderPicker = document.getElementById('folderPicker');
   const progressWrap = document.getElementById('progressWrap');
@@ -151,6 +160,44 @@ block content %}
     await swapGridFromSSR(q);
   }
 
+  // --- Drag & Drop helpers (global overlay) ---
+  const dropOverlay = document.getElementById('dropOverlay');
+  function showDrop(show) {
+    if (!dropOverlay) return;
+    dropOverlay.classList.toggle('hidden', !show);
+  }
+
+  async function handleDroppedFiles(fileList) {
+    const files = Array.from(fileList || []);
+    const pdfs  = files.filter(f => f.name.toLowerCase().endsWith('.pdf'));
+    if (!pdfs.length) return;
+
+    showProgress(true);
+    setProgress(0, pdfs.length, '');
+
+    let done = 0;
+    for (const f of pdfs) {
+      try {
+        setProgress(done, pdfs.length, f.name);
+        const fd = new FormData();
+        fd.append('file', f);
+        await fetch('/upload', { method: 'POST', body: fd });
+        await refreshCards();
+      } catch (err) {
+        console.error('Upload failed:', err);
+      } finally {
+        done += 1;
+        setProgress(done, pdfs.length, done < pdfs.length ? pdfs[done]?.name : '');
+      }
+    }
+
+    setProgress(pdfs.length, pdfs.length, 'Done');
+    setTimeout(async () => {
+      showProgress(false);
+      await refreshCards();
+    }, 700);
+  }
+
   if (folderPicker) {
     folderPicker.addEventListener('change', async (e) => {
       const all = Array.from(e.target.files || []);
@@ -184,6 +231,40 @@ block content %}
       }, 800);
     });
   }
+
+  // --- Global drag & drop events ---
+  let dragCounter = 0; // to manage nested dragenter/dragleave
+  ['dragenter','dragover'].forEach(evt => {
+    document.addEventListener(evt, (e) => {
+      // Ignore if coming from inputs or editable areas
+      if ((e.target instanceof HTMLElement) && (e.target.closest('input, textarea, [contenteditable="true"]'))) return;
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounter++;
+      showDrop(true);
+    });
+  });
+
+  ['dragleave','drop'].forEach(evt => {
+    document.addEventListener(evt, (e) => {
+      if ((e.target instanceof HTMLElement) && (e.target.closest('input, textarea, [contenteditable="true"]'))) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (evt === 'dragleave') {
+        dragCounter = Math.max(0, dragCounter - 1);
+        if (dragCounter === 0) showDrop(false);
+      }
+    });
+  });
+
+  document.addEventListener('drop', async (e) => {
+    // If files are dropped anywhere on the page, upload PDFs
+    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+      showDrop(false);
+      dragCounter = 0;
+      await handleDroppedFiles(e.dataTransfer.files);
+    }
+  });
 
   document.addEventListener('DOMContentLoaded', async () => {
     const q = (document.querySelector('input[name="q"]') || {}).value || '';
