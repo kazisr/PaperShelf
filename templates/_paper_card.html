@@ -2,15 +2,25 @@
   class="rounded-2xl shadow-sm hover:shadow-lg overflow-hidden flex flex-col h-[520px] sm:h-[540px] lg:h-[560px] border transition duration-150 ease-out
          bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 [perspective:1000px]"
   data-paper-card
-  onmouseenter="this.style.transform='translateY(-1px)';"
-  onmouseleave="this.style.transform='none';"
+  onmouseenter="if(!this.classList.contains('is-flipped')) this.style.transform='translateY(-1px)';"
+  onmouseleave="if(!this.classList.contains('is-flipped')) this.style.transform='none';"
 >
+  <style>
+    /* Flip via class so it works even if inline styles are stripped/re-rendered */
+    [data-paper-card].is-flipped [data-flip-inner] {
+      transform: rotateY(180deg);
+    }
+    /* Enable GPU and keep 3D context stable */
+    [data-flip-inner] {
+      will-change: transform;
+    }
+  </style>
   <!-- Flip Container -->
   <div data-flip-inner class="relative w-full h-full [transform-style:preserve-3d] transition-transform duration-700 ease-out">
     <!-- FRONT FACE -->
-    <div class="absolute inset-0 [backface-visibility:hidden]">
+    <div class="absolute inset-0 [backface-visibility:hidden] flex flex-col">
       <!-- Thumbnail (front) -->
-      <div data-thumb class="relative flex items-center justify-center overflow-hidden border-b border-gray-200 dark:border-slate-700 bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 h-[40%] min-h-[120px]">
+      <div data-thumb class="relative flex-none flex items-center justify-center overflow-hidden border-b border-gray-200 dark:border-slate-700 bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 h-[40%] min-h-[120px]">
         {% if paper.thumb_path %}
           <img src="/media/{{ paper.thumb_path }}" alt="{{ paper.title }}" loading="lazy" class="w-full h-full object-cover" />
         {% else %}
@@ -35,7 +45,7 @@
         </a>
       </div>
       <!-- Body (front) -->
-      <div class="flex flex-col flex-1 p-4 gap-2">
+      <div class="flex flex-col flex-1 min-h-0 p-4 gap-2">
         <h3 class="text-base font-bold leading-snug m-0 line-clamp-2">
           <a href="{{ paper.url or ('/media/' + paper.path) }}" target="_blank" class="text-slate-900 dark:text-slate-50 hover:text-blue-600 dark:hover:text-blue-300 transition">
             {{ paper.title }}
@@ -168,25 +178,44 @@
 
     if (!inner) return;
 
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     function openFlip() {
-      inner.style.transform = 'rotateY(180deg)';
+      // Use class flip (CSS drives the transform)
+      root.classList.add('is-flipped');
       // After flip, scroll back face to start just below thumbnail
       if (back) {
-        requestAnimationFrame(() => {
+        const scrollNow = () => {
           const y = thumb ? (thumb.offsetHeight + 1) : 0;
-          back.scrollTo({ top: y, behavior: 'smooth' });
-        });
+          back.scrollTo({ top: y, behavior: prefersReduced ? 'auto' : 'smooth' });
+        };
+        // Give layout one frame to apply the class
+        requestAnimationFrame(scrollNow);
       }
     }
 
     function closeFlip() {
-      inner.style.transform = '';
+      root.classList.remove('is-flipped');
       // Reset back scroll when closing
       if (back) back.scrollTo({ top: 0, behavior: 'auto' });
     }
 
     openBtn && openBtn.addEventListener('click', openFlip);
     closeBtn && closeBtn.addEventListener('click', closeFlip);
+    // In case SSR swaps re-insert buttons later within the same root, observe and rebind
+    const rebinder = new MutationObserver(() => {
+      const ob = root.querySelector('[data-flip-open]');
+      const cb = root.querySelector('[data-flip-close]');
+      if (ob && !ob.__boundOpen) {
+        ob.addEventListener('click', openFlip);
+        ob.__boundOpen = true;
+      }
+      if (cb && !cb.__boundClose) {
+        cb.addEventListener('click', closeFlip);
+        cb.__boundClose = true;
+      }
+    });
+    rebinder.observe(root, { childList: true, subtree: true });
   }
 
   function initAll() {
