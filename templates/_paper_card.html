@@ -1,26 +1,26 @@
 <div
-  class="rounded-2xl shadow-sm hover:shadow-lg overflow-hidden flex flex-col h-[520px] sm:h-[540px] lg:h-[560px] border transition duration-150 ease-out
-         bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 [perspective:1000px]"
+  class="rounded-3xl ring-1 ring-slate-950/5 dark:ring-white/10 shadow-lg hover:shadow-xl overflow-hidden flex flex-col h-[520px] sm:h-[540px] lg:h-[560px]
+         bg-white/95 dark:bg-slate-900/90 text-slate-900 dark:text-slate-100 [perspective:1000px] transition duration-200"
   data-paper-card
   onmouseenter="if(!this.classList.contains('is-flipped')) this.style.transform='translateY(-1px)';"
   onmouseleave="if(!this.classList.contains('is-flipped')) this.style.transform='none';"
 >
   <style>
     /* Flip via class so it works even if inline styles are stripped/re-rendered */
-    [data-paper-card].is-flipped [data-flip-inner] {
-      transform: rotateY(180deg);
-    }
+    [data-paper-card].is-flipped [data-flip-inner] { transform: rotateY(180deg); }
     /* Enable GPU and keep 3D context stable */
-    [data-flip-inner] {
-      will-change: transform;
-    }
+    [data-flip-inner] { will-change: transform; }
   </style>
+
   <!-- Flip Container -->
   <div data-flip-inner class="relative w-full h-full [transform-style:preserve-3d] transition-transform duration-700 ease-out">
+
     <!-- FRONT FACE -->
     <div class="absolute inset-0 [backface-visibility:hidden] flex flex-col">
       <!-- Thumbnail (front) -->
-      <div data-thumb class="relative flex-none flex items-center justify-center overflow-hidden border-b border-gray-200 dark:border-slate-700 bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 h-[40%] min-h-[120px]">
+      <div data-thumb
+           class="relative flex-none flex items-center justify-center overflow-hidden border-b border-slate-200/70 dark:border-slate-700/70
+                  bg-slate-50/90 dark:bg-slate-800/80 h-[40%] min-h-[120px]">
         {% if paper.thumb_path %}
           <img src="/media/{{ paper.thumb_path }}" alt="{{ paper.title }}" loading="lazy" class="w-full h-full object-cover" />
         {% else %}
@@ -28,30 +28,29 @@
             <path fill="currentColor" d="M6 2h7l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm7 1.5V8h4.5L13 3.5z"/>
           </svg>
         {% endif %}
-        <!-- Download button (front) -->
-        <a
-          href="/media/{{ paper.path }}"
-          download
-          class="absolute top-2 right-2 inline-flex items-center justify-center w-9 h-9 rounded-full
-                 bg-blue-50/80 dark:bg-slate-900/50 backdrop-blur-sm border border-blue-200/60 dark:border-slate-700
-                 text-blue-600 dark:text-slate-100 shadow-sm hover:bg-blue-100 dark:hover:bg-slate-900/70
-                 transition"
-          aria-label="Download PDF"
-          title="Download PDF"
-        >
+        <!-- Download button (front) · M3 elevated icon button -->
+        <a href="/media/{{ paper.path }}" download
+           class="absolute top-2 right-2 inline-flex items-center justify-center size-9 rounded-full
+                  bg-white/80 dark:bg-slate-900/60 backdrop-blur-sm ring-1 ring-slate-950/10 dark:ring-white/10
+                  text-blue-700 dark:text-slate-100 shadow-sm hover:bg-white dark:hover:bg-slate-900/70 transition"
+           aria-label="Download PDF" title="Download PDF">
           <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
             <path d="M12 3a1 1 0 011 1v8.586l2.293-2.293a1 1 0 111.414 1.414l-4.004 4.004a1 1 0 01-1.414 0L6.286 11.707a1 1 0 111.414-1.414L10 12.586V4a1 1 0 011-1zm-7 14a1 1 0 100 2h14a1 1 0 100-2H5z"/>
           </svg>
         </a>
       </div>
+
       <!-- Body (front) -->
       <div class="flex flex-col flex-1 min-h-0 p-4 gap-2">
         <h3 class="text-base font-bold leading-snug m-0 line-clamp-2">
-          <a href="{{ paper.url or ('/media/' + paper.path) }}" target="_blank" class="text-slate-900 dark:text-slate-50 hover:text-blue-600 dark:hover:text-blue-300 transition">
+          <a href="{{ paper.url or ('/media/' + paper.path) }}" target="_blank"
+             class="text-slate-900 dark:text-slate-50 hover:text-blue-700 dark:hover:text-sky-300 transition-colors">
             {{ paper.title }}
           </a>
         </h3>
-        <div class="mt-1 text-sm flex items-center gap-2 text-slate-600 dark:text-slate-200">
+
+        <!-- Authors -->
+        <div class="mt-1 text-sm flex items-center gap-2 text-slate-700 dark:text-slate-200">
           <div class="min-w-0 flex-1 overflow-hidden">
             {% set authors = paper.authors or [] %}
             {% if authors|length > 0 %}
@@ -61,26 +60,44 @@
             {% endif %}
           </div>
         </div>
+
+        <!-- Chips: venue · year · data source (M3 assist/tonal chips) -->
         <div class="flex flex-wrap gap-2 mt-2 text-xs">
           {% if paper.venue %}
-            <span class="inline-flex items-center rounded-full px-3 py-1 font-medium bg-slate-100 text-slate-700 dark:bg-slate-600/40 dark:text-slate-100 dark:ring-1 dark:ring-slate-500/40">{{ paper.venue }}</span>
+            <span class="inline-flex items-center rounded-full px-3 py-1 font-medium
+                           bg-slate-100/80 text-slate-800 ring-1 ring-slate-950/10
+                           dark:bg-white/10 dark:text-slate-100 dark:ring-white/10">{{ paper.venue }}</span>
           {% endif %}
           {% if paper.year %}
-            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200 dark:ring-1 dark:ring-indigo-400/30">{{ paper.year }}</span>
+            <span class="inline-flex items-center rounded-full px-2.5 py-0.5 font-semibold
+                           bg-indigo-100/80 text-indigo-800 ring-1 ring-indigo-900/10
+                           dark:bg-indigo-500/20 dark:text-indigo-200 dark:ring-indigo-400/30">{{ paper.year }}</span>
           {% endif %}
           {% if paper.data_src %}
-            <span class="inline-flex items-center rounded-full px-3 py-1 font-semibold bg-indigo-100 text-indigo-700 dark:bg-sky-500/20 dark:text-sky-200 dark:ring-1 dark:ring-sky-400/30">{{ paper.data_src | title }}</span>
+            <span class="inline-flex items-center rounded-full px-3 py-1 font-semibold
+                           bg-blue-50/80 text-blue-700 ring-1 ring-blue-900/10
+                           dark:bg-sky-500/20 dark:text-sky-200 dark:ring-sky-400/30">{{ paper.data_src | title }}</span>
           {% endif %}
         </div>
+
         {% if paper.abstract %}
           <p class="mt-3 text-[0.95rem] leading-relaxed text-slate-700 dark:text-slate-200 line-clamp-3">
             {{ paper.abstract }}
           </p>
           <div class="mt-auto flex items-center justify-end gap-2">
-            <button type="button" data-flip-open class="inline-flex items-center px-3.5 py-2 rounded-xl text-white text-sm font-semibold shadow-sm bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-blue-500 dark:hover:bg-blue-400">
+            <!-- Tonal button → Read more -->
+            <button type="button" data-flip-open
+              class="inline-flex items-center h-9 px-3.5 rounded-2xl text-sm font-semibold
+                     text-blue-700 dark:text-sky-200 bg-blue-50 hover:bg-blue-100
+                     dark:bg-white/10 dark:hover:bg-white/15 ring-1 ring-inset ring-blue-200/60 dark:ring-white/10
+                     focus:outline-none focus:ring-2 focus:ring-blue-600/50">
               Read more
             </button>
-            <a href="{{ paper.url or ('/media/' + paper.path) }}" target="_blank" class="inline-flex items-center px-3.5 py-2 rounded-xl text-sm font-semibold border bg-white text-slate-800 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <!-- Filled button → Open -->
+            <a href="{{ paper.url or ('/media/' + paper.path) }}" target="_blank"
+               class="inline-flex items-center h-9 px-3.5 rounded-2xl text-sm font-semibold text-white shadow-sm
+                      bg-gradient-to-b from-blue-600 to-blue-700 hover:from-blue-600 hover:to-blue-700
+                      dark:from-blue-500 dark:to-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/50">
               Open
             </a>
           </div>
@@ -93,7 +110,9 @@
       <!-- Back content is scrollable -->
       <div data-back class="flex flex-col h-full overflow-y-auto overscroll-contain scroll-smooth">
         <!-- Thumbnail (back, static banner) -->
-        <div data-thumb class="relative flex items-center justify-center overflow-hidden border-b border-gray-200 dark:border-slate-700 bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 h-[40%] min-h-[120px]">
+        <div data-thumb
+             class="relative flex items-center justify-center overflow-hidden border-b border-slate-200/70 dark:border-slate-700/70
+                    bg-slate-50/90 dark:bg-slate-800/80 h-[40%] min-h-[120px]">
           {% if paper.thumb_path %}
             <img src="/media/{{ paper.thumb_path }}" alt="{{ paper.title }}" loading="lazy" class="w-full h-full object-cover" />
           {% else %}
@@ -102,29 +121,26 @@
             </svg>
           {% endif %}
           <!-- Download button (back) -->
-          <a
-            href="/media/{{ paper.path }}"
-            download
-            class="absolute top-2 right-2 inline-flex items-center justify-center w-9 h-9 rounded-full
-                   bg-blue-50/80 dark:bg-slate-900/50 backdrop-blur-sm border border-blue-200/60 dark:border-slate-700
-                   text-blue-600 dark:text-slate-100 shadow-sm hover:bg-blue-100 dark:hover:bg-slate-900/70
-                   transition"
-            aria-label="Download PDF"
-            title="Download PDF"
-          >
+          <a href="/media/{{ paper.path }}" download
+             class="absolute top-2 right-2 inline-flex items-center justify-center size-9 rounded-full
+                    bg-white/80 dark:bg-slate-900/60 backdrop-blur-sm ring-1 ring-slate-950/10 dark:ring-white/10
+                    text-blue-700 dark:text-slate-100 shadow-sm hover:bg-white dark:hover:bg-slate-900/70 transition"
+             aria-label="Download PDF" title="Download PDF">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 3a1 1 0 011 1v8.586l2.293-2.293a1 1 0 111.414 1.414l-4.004 4.004a1 1 0 01-1.414 0L6.286 11.707a1 1 0 111.414-1.414L10 12.586V4a1 1 0 011-1zm-7 14a1 1 0 100 2h14a1 1 0 100-2H5z"/>
             </svg>
           </a>
         </div>
+
         <!-- Body (back) -->
         <div class="flex flex-col flex-1 p-4 gap-2">
           <h3 class="text-base font-bold leading-snug m-0">
-            <a href="{{ paper.url or ('/media/' + paper.path) }}" target="_blank" class="text-slate-900 dark:text-slate-50 hover:text-blue-600 dark:hover:text-blue-300 transition">
+            <a href="{{ paper.url or ('/media/' + paper.path) }}" target="_blank"
+               class="text-slate-900 dark:text-slate-50 hover:text-blue-700 dark:hover:text-sky-300 transition-colors">
               {{ paper.title }}
             </a>
           </h3>
-          <div class="mt-1 text-sm flex items-center gap-2 text-slate-600 dark:text-slate-200">
+          <div class="mt-1 text-sm flex items-center gap-2 text-slate-700 dark:text-slate-200">
             <div class="min-w-0 flex-1">
               {% set authors = paper.authors or [] %}
               {% if authors|length > 0 %}
@@ -136,13 +152,19 @@
           </div>
           <div class="flex flex-wrap gap-2 mt-2 text-xs">
             {% if paper.venue %}
-              <span class="inline-flex items-center rounded-full px-3 py-1 font-medium bg-slate-100 text-slate-700 dark:bg-slate-600/40 dark:text-slate-100 dark:ring-1 dark:ring-slate-500/40">{{ paper.venue }}</span>
+              <span class="inline-flex items-center rounded-full px-3 py-1 font-medium
+                             bg-slate-100/80 text-slate-800 ring-1 ring-slate-950/10
+                             dark:bg-white/10 dark:text-slate-100 dark:ring-white/10">{{ paper.venue }}</span>
             {% endif %}
             {% if paper.year %}
-              <span class="inline-flex items-center rounded-full px-2.5 py-0.5 font-semibold bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200 dark:ring-1 dark:ring-indigo-400/30">{{ paper.year }}</span>
+              <span class="inline-flex items-center rounded-full px-2.5 py-0.5 font-semibold
+                             bg-indigo-100/80 text-indigo-800 ring-1 ring-indigo-900/10
+                             dark:bg-indigo-500/20 dark:text-indigo-200 dark:ring-indigo-400/30">{{ paper.year }}</span>
             {% endif %}
             {% if paper.data_src %}
-              <span class="inline-flex items-center rounded-full px-3 py-1 font-semibold bg-indigo-100 text-indigo-700 dark:bg-sky-500/20 dark:text-sky-200 dark:ring-1 dark:ring-sky-400/30">{{ paper.data_src | title }}</span>
+              <span class="inline-flex items-center rounded-full px-3 py-1 font-semibold
+                             bg-blue-50/80 text-blue-700 ring-1 ring-blue-900/10
+                             dark:bg-sky-500/20 dark:text-sky-200 dark:ring-sky-400/30">{{ paper.data_src | title }}</span>
             {% endif %}
           </div>
           {% if paper.abstract %}
@@ -151,16 +173,26 @@
             </p>
           {% endif %}
           <div class="mt-auto flex items-center justify-between gap-2 pt-2">
-            <button type="button" data-flip-close class="inline-flex items-center px-3.5 py-2 rounded-xl text-sm font-semibold border bg-white text-slate-800 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-100 dark:border-slate-600 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <!-- Outlined button → Show less -->
+            <button type="button" data-flip-close
+              class="inline-flex items-center h-9 px-3.5 rounded-2xl text-sm font-semibold
+                     text-slate-900 dark:text-slate-100 bg-transparent
+                     ring-1 ring-inset ring-slate-300 dark:ring-white/20 hover:bg-slate-50 dark:hover:bg-white/10
+                     focus:outline-none focus:ring-2 focus:ring-blue-600/50">
               Show less
             </button>
-            <a href="{{ paper.url or ('/media/' + paper.path) }}" target="_blank" class="inline-flex items-center px-3.5 py-2 rounded-xl text-white text-sm font-semibold shadow-sm bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-blue-500 dark:hover:bg-blue-400">
+            <!-- Filled button → Open -->
+            <a href="{{ paper.url or ('/media/' + paper.path) }}" target="_blank"
+               class="inline-flex items-center h-9 px-3.5 rounded-2xl text-sm font-semibold text-white shadow-sm
+                      bg-gradient-to-b from-blue-600 to-blue-700 hover:from-blue-600 hover:to-blue-700
+                      dark:from-blue-500 dark:to-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-600/50">
               Open
             </a>
           </div>
         </div>
       </div>
     </div>
+
   </div>
 </div>
 
@@ -181,46 +213,35 @@
     const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function openFlip() {
-      // Use class flip (CSS drives the transform)
       root.classList.add('is-flipped');
-      // After flip, scroll back face to start just below thumbnail
       if (back) {
         const scrollNow = () => {
           const y = thumb ? (thumb.offsetHeight + 1) : 0;
           back.scrollTo({ top: y, behavior: prefersReduced ? 'auto' : 'smooth' });
         };
-        // Give layout one frame to apply the class
         requestAnimationFrame(scrollNow);
       }
     }
 
     function closeFlip() {
       root.classList.remove('is-flipped');
-      // Reset back scroll when closing
       if (back) back.scrollTo({ top: 0, behavior: 'auto' });
     }
 
     openBtn && openBtn.addEventListener('click', openFlip);
     closeBtn && closeBtn.addEventListener('click', closeFlip);
-    // In case SSR swaps re-insert buttons later within the same root, observe and rebind
+
+    // Rebind if DOM swaps in buttons later (SSR updates)
     const rebinder = new MutationObserver(() => {
       const ob = root.querySelector('[data-flip-open]');
       const cb = root.querySelector('[data-flip-close]');
-      if (ob && !ob.__boundOpen) {
-        ob.addEventListener('click', openFlip);
-        ob.__boundOpen = true;
-      }
-      if (cb && !cb.__boundClose) {
-        cb.addEventListener('click', closeFlip);
-        cb.__boundClose = true;
-      }
+      if (ob && !ob.__boundOpen) { ob.addEventListener('click', openFlip); ob.__boundOpen = true; }
+      if (cb && !cb.__boundClose) { cb.addEventListener('click', closeFlip); cb.__boundClose = true; }
     });
     rebinder.observe(root, { childList: true, subtree: true });
   }
 
-  function initAll() {
-    document.querySelectorAll('[data-paper-card]').forEach(initCard);
-  }
+  function initAll() { document.querySelectorAll('[data-paper-card]').forEach(initCard); }
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initAll);
@@ -228,7 +249,6 @@
     initAll();
   }
 
-  // Re-init for dynamically added cards
   new MutationObserver(muts => {
     muts.forEach(m => m.addedNodes.forEach(n => {
       if (!(n instanceof Element)) return;
