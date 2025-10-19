@@ -1,5 +1,4 @@
-{% extends "base.html" %} {% block title %}PaperShelf{% endblock %} {%
-block content %}
+{% extends "base.html" %} {% block title %}PaperShelf{% endblock %} {% block content %}
 
 <!-- Top panel · Material 3 style (all features preserved) -->
 <div class="mb-6">
@@ -82,37 +81,92 @@ block content %}
   </div>
 </div>
 
-<!-- Cards grid -->
-<div id="cards" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-  {% for p in papers %} {% set paper = p %} {% include "_paper_card.html" %} {%
-  else %}
+<!-- Transparent Carousel · compact cards -->
+<div class="relative">
+  <div id="cards"
+       class="snap-x snap-proximity overflow-x-auto overflow-y-visible
+              flex gap-4 py-3 scroll-smooth
+              bg-transparent
+              [-ms-overflow-style:none] [scrollbar-width:none]"
+       style="-webkit-overflow-scrolling: touch;">
+    <style>
+  #cards::-webkit-scrollbar { display: none; }
+  #cards { scroll-padding: 0 !important; }
 
-  <!-- Drag & Drop only when there are no papers -->
-  <div
-    id="drop"
-    x-data
-    @dragover.prevent.delay.100="$el.classList.add('bg-blue-50','border-blue-500')"
-    @dragleave.prevent.delay.100="$el.classList.remove('bg-blue-50','border-blue-500')"
-    @drop.prevent="
-           $el.classList.remove('bg-blue-50','border-blue-500');
-           const files = $event.dataTransfer.files;
-           for (const f of files) {
-             if (!f.name.toLowerCase().endsWith('.pdf')) continue;
-             const fd = new FormData();
-             fd.append('file', f);
-             fetch('/upload', { method:'POST', body:fd }).then(() => refreshCards());
-           }"
-    class="col-span-full mb-6 p-8 text-center border-4 border-dashed rounded-2xl border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800 text-lg text-slate-600 dark:text-slate-300 transition"
-  >
-    Drag & drop <strong>PDF(s)</strong> here to add 📥
+  /* --- Active-center emphasis for slides (center = normal, others smaller) --- */
+  .ps-slide {
+    transform: scale(1);
+    /* Cheaper than filter: drop-shadow */
+    box-shadow: 0 2px 6px rgba(2,6,23,.12);
+    transition: transform .28s cubic-bezier(.22,.61,.36,1), box-shadow .28s ease;
+    transform-origin: center center;
+
+    /* Performance hints */
+    will-change: transform;
+    backface-visibility: hidden;
+    contain: paint;              /* isolate paints */
+    perspective: 1000px;         /* avoid subpixel jitter in some browsers */
+  }
+  .ps-slide.is-active {
+    transform: scale(1) translateY(-2px);
+    box-shadow: 0 10px 22px rgba(2,6,23,.22);
+    z-index: 4;
+  }
+  .ps-slide.is-inactive {
+    transform: scale(.80);
+    opacity: .7;
+    box-shadow: 0 1px 3px rgba(2,6,23,.10);
+    z-index: 1;
+  }
+  .ps-ghost {
+    opacity: 0;
+    pointer-events: none;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ps-slide { transition: none; }
+  }
+</style>
+    {% for p in papers %}
+      {% set paper = p %}
+      <!-- reduced card width + ps-slide for emphasis -->
+      <div class="ps-slide snap-start shrink-0 w-[65vw] sm:w-[320px] md:w-[360px] lg:w-[400px] rounded-3xl bg-transparent">
+          {% include "_paper_card.html" %}
+        </div>
+    {% else %}
+      <div class="ps-slide snap-start shrink-0 w-[70vw] sm:w-[360px] md:w-[420px] bg-transparent">
+        <div
+          id="drop"
+          x-data
+          @dragover.prevent.delay.100="$el.classList.add('bg-blue-50','border-blue-500')"
+          @dragleave.prevent.delay.100="$el.classList.remove('bg-blue-50','border-blue-500')"
+          @drop.prevent="
+                 $el.classList.remove('bg-blue-50','border-blue-500');
+                 const files = $event.dataTransfer.files;
+                 for (const f of files) {
+                   if (!f.name.toLowerCase().endsWith('.pdf')) continue;
+                   const fd = new FormData();
+                   fd.append('file', f);
+                   fetch('/upload', { method:'POST', body:fd }).then(() => refreshCards());
+                 }"
+          class="mb-6 p-8 text-center border-4 border-dashed rounded-2xl
+                 border-slate-300 dark:border-slate-600 bg-transparent
+                 text-lg text-slate-600 dark:text-slate-300 transition">
+          Drag & drop <strong>PDF(s)</strong> here to add 📥
+        </div>
+
+        <div
+          class="text-slate-500 dark:text-slate-300 text-lg p-8 border border-dashed
+                 border-slate-300 dark:border-slate-700 rounded-xl text-center bg-transparent">
+          No papers yet. Select a folder or drop PDFs above to get started!
+        </div>
+      </div>
+    {% endfor %}
   </div>
 
-  <div
-    class="text-slate-500 dark:text-slate-300 text-lg p-8 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl col-span-full text-center"
-  >
-    No papers yet. Select a folder or drop PDFs above to get started!
-  </div>
-  {% endfor %}
+  <div id="cardsDots" class="flex items-center justify-center gap-1.5 mt-2 select-none bg-transparent"></div>
 </div>
 
 <!-- Global Drag & Drop Overlay (appears on drag, hidden otherwise) -->
@@ -278,9 +332,249 @@ block content %}
     }
   });
 
+  function stripGhosts(rail) {
+  rail.querySelectorAll('.ps-slide[data-ghost]').forEach(n => n.remove());
+}
+
+  function ensureGhostSlides(rail) {
+  // remove any stale ghosts first
+  stripGhosts(rail);
+
+  const realSlides = Array.from(rail.querySelectorAll('.ps-slide:not([data-ghost])'));
+  if (realSlides.length === 0) return;
+
+  // clone first and last for spacing/centering
+  const first = realSlides[0];
+  const last  = realSlides[realSlides.length - 1];
+
+  const pre  = first.cloneNode(true);
+  pre.dataset.ghost = '1';
+  pre.classList.add('ps-ghost');
+
+  const post = last.cloneNode(true);
+  post.dataset.ghost = '1';
+  post.classList.add('ps-ghost');
+
+  // avoid duplicate IDs inside clones (defensive)
+  pre.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+  post.querySelectorAll('[id]').forEach(el => el.removeAttribute('id'));
+
+  first.before(pre);
+  last.after(post);
+}
+
+  function attachPeekCarousel() {
+  const rail = document.getElementById('cards');
+  const dotsWrap = document.getElementById('cardsDots');
+  if (!rail || !dotsWrap) return;
+
+  // make sure ghosts exist for clean centering at edges
+  ensureGhostSlides(rail);
+
+  // real slides exclude ghosts
+  const realSlides = Array.from(rail.querySelectorAll('.ps-slide:not([data-ghost])'));
+  // domSlides include ghosts (for geometry)
+  const domSlides  = Array.from(rail.querySelectorAll('.ps-slide'));
+
+  dotsWrap.innerHTML = '';
+
+  // Build dots for REAL slides only
+  const dots = realSlides.map((_, i) => {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+    dot.className = [
+      'h-2.5 w-2.5 rounded-full ring-1 ring-slate-950/10 dark:ring-white/10',
+      'bg-slate-300 dark:bg-slate-600 opacity-70',
+      'transition-transform duration-200'
+    ].join(' ');
+    dot.addEventListener('click', () => {
+      realSlides[i]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    });
+    dotsWrap.appendChild(dot);
+    return dot;
+  });
+
+  const railCenter = () => rail.scrollLeft + rail.clientWidth / 2;
+
+  // nearest REAL slide by center distance
+  const nearestRealIndex = () => {
+    const rc = railCenter();
+    let best = 0, bestDist = Infinity;
+    for (let i = 0; i < realSlides.length; i++) {
+      const el = realSlides[i];
+      const c  = el.offsetLeft + el.clientWidth / 2;
+      const d  = Math.abs(c - rc);
+      if (d < bestDist) { best = i; bestDist = d; }
+    }
+    return best;
+  };
+
+  const updateUI = () => {
+    const idx = nearestRealIndex();
+
+    // dots
+    dots.forEach((d, i) => {
+      const active = i === idx;
+      d.style.transform = active ? 'scale(1.25)' : 'scale(1)';
+      d.style.opacity = active ? '1' : '0.7';
+      d.classList.toggle('bg-blue-600', active);
+      d.classList.toggle('dark:bg-sky-400', active);
+      d.classList.toggle('bg-slate-300', !active);
+      d.classList.toggle('dark:bg-slate-600', !active);
+    });
+
+    // emphasis: clear all, then set only the active REAL slide
+    domSlides.forEach(el => {
+      el.classList.remove('is-active');
+      el.classList.add('is-inactive');
+      el.setAttribute('aria-current', 'false');
+    });
+    const activeEl = realSlides[idx];
+    if (activeEl) {
+      activeEl.classList.add('is-active');
+      activeEl.classList.remove('is-inactive');
+      activeEl.setAttribute('aria-current', 'true');
+    }
+  };
+
+  // Wheel guard: allow inner vertical scroll
+  if (!rail.__wheelBound) {
+    const canVertScroll = (el, stopAt) => {
+      while (el && el !== stopAt && el !== document.body) {
+        if (el instanceof Element) {
+          const cs = getComputedStyle(el);
+          if ((cs.overflowY === 'auto' || cs.overflowY === 'scroll') && el.scrollHeight > el.clientHeight) return true;
+        }
+        el = el.parentElement;
+      }
+      return false;
+    };
+    rail.addEventListener('wheel', (e) => {
+      if (canVertScroll(e.target, rail)) return;
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        rail.scrollLeft += e.deltaY;
+        e.preventDefault();
+      }
+    }, { passive: false });
+    rail.__wheelBound = true;
+  }
+
+  rail.setAttribute('tabindex', '0');
+  if (!rail.__keyBound) {
+    rail.addEventListener('keydown', (e) => {
+      const step = rail.clientWidth * 0.9;
+      if (e.key === 'ArrowRight') rail.scrollBy({ left: step,  behavior: 'smooth' });
+      if (e.key === 'ArrowLeft')  rail.scrollBy({ left: -step, behavior: 'smooth' });
+    });
+    rail.__keyBound = true;
+  }
+
+  let ticking = false;
+  rail.addEventListener('scroll', () => {
+    if (!ticking) {
+      ticking = true;
+      requestAnimationFrame(() => { updateUI(); ticking = false; });
+    }
+  }, { passive: true });
+
+  // Initial paint — center second real slide if available
+  requestAnimationFrame(() => {
+    if (realSlides.length >= 2) {
+      realSlides[1].scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' });
+    } else if (realSlides.length === 1) {
+      realSlides[0].scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' });
+    }
+    updateUI();
+  });
+}
+
+  function attachAutoScroll({
+  railId = 'cards',
+  intervalMs = 3000,
+  pauseAfterUserMs = 1500
+} = {}) {
+  const rail = document.getElementById(railId);
+  if (!rail) return;
+
+  // clear timers
+  if (rail.__autoTimer)  { clearInterval(rail.__autoTimer);  rail.__autoTimer  = null; }
+  if (rail.__resumeTimer){ clearTimeout(rail.__resumeTimer); rail.__resumeTimer = null; }
+
+  // ensure ghosts present (in case SSR just refreshed)
+  ensureGhostSlides(rail);
+
+  const realSlides = Array.from(rail.querySelectorAll('.ps-slide:not([data-ghost])'));
+  if (realSlides.length <= 1) return;
+
+  const centerIndex = () => {
+    const mid = rail.scrollLeft + rail.clientWidth / 2;
+    let best = 0, bestDist = Infinity;
+    for (let i = 0; i < realSlides.length; i++) {
+      const c = realSlides[i].offsetLeft + realSlides[i].clientWidth / 2;
+      const d = Math.abs(c - mid);
+      if (d < bestDist) { best = i; bestDist = d; }
+    }
+    return best;
+  };
+
+  const scrollToReal = (i) => {
+    i = (i + realSlides.length) % realSlides.length;
+    realSlides[i]?.scrollIntoView({
+      behavior: 'smooth',
+      inline: 'center',
+      block: 'nearest'
+    });
+  };
+
+  const next = () => scrollToReal(centerIndex() + 1);
+
+  const startAuto = () => { stopAuto(); rail.__autoTimer = setInterval(next, intervalMs); };
+  const stopAuto  = () => { if (rail.__autoTimer) clearInterval(rail.__autoTimer); rail.__autoTimer = null; };
+
+  const userPause = () => {
+    stopAuto();
+    if (rail.__resumeTimer) clearTimeout(rail.__resumeTimer);
+    rail.__resumeTimer = setTimeout(startAuto, pauseAfterUserMs);
+  };
+
+  const bindOnce = (evt, handler, opts) => {
+    const key = `__bound_${evt}`;
+    if (rail[key]) return;
+    rail.addEventListener(evt, handler, opts);
+    rail[key] = true;
+  };
+
+  bindOnce('pointerenter', userPause);
+  bindOnce('pointerleave', () => {});
+  bindOnce('wheel', () => { userPause(); }, { passive: true });
+  bindOnce('touchstart', () => { userPause(); }, { passive: true });
+  bindOnce('keydown', (e) => {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') userPause();
+  });
+
+  // Start after layout settles and center a sane initial slide
+  requestAnimationFrame(() => {
+    if (realSlides.length >= 2) {
+      realSlides[1].scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' });
+    }
+    setTimeout(startAuto, 120);
+  });
+}
+
+  // ---- Initial SSR render + attach; and re-attach after SSR swap ----
   document.addEventListener('DOMContentLoaded', async () => {
     const q = (document.querySelector('input[name="q"]') || {}).value || '';
     await swapGridFromSSR(q);
+    attachPeekCarousel();
+    attachAutoScroll({ intervalMs: 3000, pauseAfterUserMs: 1500, snapDurationMs: 700 });
   });
+
+  const __swapGridFromSSR = swapGridFromSSR;
+  swapGridFromSSR = async function(q) {
+    await __swapGridFromSSR(q);
+    attachPeekCarousel();
+    attachAutoScroll({ intervalMs: 3000, pauseAfterUserMs: 1500, snapDurationMs: 700 });
+  };
 </script>
 {% endblock %}
