@@ -21,6 +21,12 @@ from app.services.metadata import autofetch_metadata
 
 app = FastAPI(title="PaperShelf")
 
+
+# Serve static assets (e.g., favicon, logos)
+STATIC_DIR = pathlib.Path(__file__).resolve().parents[1] / "static"
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=STATIC_DIR, html=False), name="static")
+
 # Serve the data dir (pdfs/thumbs) without changing any template paths
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/media", StaticFiles(directory=DATA_DIR, html=False), name="media")
