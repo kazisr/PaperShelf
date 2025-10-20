@@ -3,15 +3,15 @@ from __future__ import annotations
 import json
 import os
 import pathlib
+import re
 from typing import Optional
 
 import fitz
 from fastapi import FastAPI, Request, UploadFile, File, Form, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import RedirectResponse
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, and_
 
 from app.config import DATA_DIR, UPLOADS_DIR, THUMBS_DIR, TEMPLATES_DIR
 from app.db import Session, PaperORM, init_db
@@ -20,7 +20,6 @@ from app.services.indexer import index_pdf
 from app.services.metadata import autofetch_metadata
 
 app = FastAPI(title="PaperShelf")
-
 
 # Serve static assets (e.g., favicon, logos)
 STATIC_DIR = pathlib.Path(__file__).resolve().parents[1] / "static"
@@ -33,114 +32,193 @@ app.mount("/media", StaticFiles(directory=DATA_DIR, html=False), name="media")
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
-# Init DB (no UI change)
+# Init DB
 init_db()
 
-
 # -------------------------
-# Helpers (no UI change)
+# Helpers
 # -------------------------
 def _row_to_view(p: PaperORM) -> dict:
-    """Return a dict that is friendly to both old and new frontends."""
     authors_list = json.loads(p.authors_json or "[]")
     authors_str = ", ".join(authors_list) if isinstance(authors_list, list) else str(authors_list or "")
     return {
-        # core
         "id": p.id,
         "title": p.title,
-        "authors": authors_list,        # list form
-        "authors_str": authors_str,     # string form (compat)
+        "authors": authors_list,
+        "authors_str": authors_str,
         "year": p.year,
         "abstract": p.abstract,
         "path": p.path,
         "thumb_path": p.thumb_path,
-        "thumbnail": p.thumb_path,      # alias (compat)
+        "thumbnail": p.thumb_path,
         "doi": p.doi,
         "arxiv_id": p.arxiv_id,
         "venue": p.venue,
         "url": p.url,
         "data_src": p.data_src,
-
-        # extra aliases some UIs use
         "file": p.path,
         "thumb": p.thumb_path,
     }
 
+TOKEN_RE = re.compile(r'(?P<key>author|year|venue):(?P<val>"[^"]+"|\S+)', re.I)
 
-def _query_items(q: Optional[str]) -> list[dict]:
+def parse_search(q: Optional[str]):
+    """
+    Supports tokens inside q like:
+      author:"Geoffrey Hinton"  year:2021  venue:ICLR  year:2020-2022
+    Returns (clean_q, filters_dict)
+    """
+    if not q:
+        return "", {}
+    filters = {"author": [], "year": [], "venue": []}
+
+    def unquote(s: str) -> str:
+        return s[1:-1] if len(s) >= 2 and s[0] == s[-1] == '"' else s
+
+    for m in TOKEN_RE.finditer(q):
+        key = m.group("key").lower()
+        val = unquote(m.group("val")).strip()
+        if val:
+            filters[key].append(val)
+
+    rest = TOKEN_RE.sub("", q).strip()
+    for k in list(filters.keys()):
+        if not filters[k]:
+            filters[k] = None
+    return rest, filters
+
+def _query_items(
+    q: Optional[str],
+    author: Optional[str | list[str]] = None,
+    year: Optional[str | list[str]] = None,
+    venue: Optional[str | list[str]] = None,
+) -> list[dict]:
+    """
+    Unified search with optional filters.
+    - author: matches substring inside authors_json
+    - year: exact 4-digit year OR range YYYY-YYYY
+    - venue: substring in venue
+    """
     q = (q or "").strip()
+
+    # normalize lists (also accept comma-separated string)
+    def norm(x):
+        if x is None:
+            return None
+        if isinstance(x, (list, tuple)):
+            return [str(v).strip() for v in x if str(v).strip()]
+        return [p for p in (s.strip() for s in str(x).split(",")) if p]
+
+    author = norm(author)
+    year   = norm(year)
+    venue  = norm(venue)
+
     with Session() as s:
-        stmt = select(PaperORM).order_by(PaperORM.created_at.desc())
+        clauses = []
+
         if q:
             like = f"%{q}%"
-            stmt = (
-                select(PaperORM)
-                .where(
-                    or_(
-                        PaperORM.title.ilike(like),
-                        PaperORM.abstract.ilike(like),
-                        PaperORM.authors_json.ilike(like),
-                        PaperORM.venue.ilike(like),
-                        PaperORM.doi.ilike(like),
-                        PaperORM.arxiv_id.ilike(like),
-                    )
-                )
-                .order_by(PaperORM.created_at.desc())
-            )
+            clauses.append(or_(
+                PaperORM.title.ilike(like),
+                PaperORM.abstract.ilike(like),
+                PaperORM.authors_json.ilike(like),
+                PaperORM.venue.ilike(like),
+                PaperORM.doi.ilike(like),
+                PaperORM.arxiv_id.ilike(like),
+                PaperORM.year.ilike(like),
+            ))
+
+        if author:
+            clauses.append(or_(*[PaperORM.authors_json.ilike(f"%{a}%") for a in author]))
+
+        if year:
+            y_ors = []
+            for y in year:
+                if re.match(r"^\d{4}-\d{4}$", y):
+                    y1, y2 = y.split("-")
+                    y_ors.append(and_(PaperORM.year >= y1, PaperORM.year <= y2))
+                else:
+                    y_ors.append(PaperORM.year == y)
+            clauses.append(or_(*y_ors))
+
+        if venue:
+            clauses.append(or_(*[PaperORM.venue.ilike(f"%{v}%") for v in venue]))
+
+        stmt = select(PaperORM)
+        if clauses:
+            stmt = stmt.where(and_(*clauses))
+        stmt = stmt.order_by(PaperORM.created_at.desc())
+
         rows = s.execute(stmt).scalars().all()
+
     return [_row_to_view(r) for r in rows]
 
-
 # -------------------------
-# PAGES (keeps your template as-is)
+# PAGES
 # -------------------------
 @app.get("/", response_class=HTMLResponse)
-def home(request: Request, q: Optional[str] = None):
-    """
-    Minimal change: we keep rendering your current index.html.
-    We also pass variables many UIs expect, but if your template doesn't use them,
-    nothing changes visually.
-    """
-    items = _query_items(q)
-    # We pass multiple names for compatibility; your template can ignore them.
+def home(
+    request: Request,
+    q: Optional[str] = None,
+    author: Optional[str] = None,
+    year: Optional[str] = None,
+    venue: Optional[str] = None,
+):
+    # Parse tokens from q, let explicit params win
+    clean_q, tokens = parse_search(q)
+    a = author or tokens.get("author")
+    y = year   or tokens.get("year")
+    v = venue  or tokens.get("venue")
+
+    items = _query_items(clean_q, author=a, year=y, venue=v)
     context = {
         "request": request,
-        "items": items,           # common name
-        "papers": items,          # alias some templates used
-        "results": items,         # another alias just in case
+        "items": items,
+        "papers": items,
+        "results": items,
         "q": q or "",
+        "author": author or "",
+        "year": year or "",
+        "venue": venue or "",
         "count": len(items),
     }
     return templates.TemplateResponse("index.html", context)
 
-
 # -------------------------
-# API: SEARCH (JSON) — unchanged, now with aliases for old UIs
+# API: SEARCH (JSON)
 # -------------------------
 @app.get("/api/search")
-def api_search(q: Optional[str] = None):
-    items = _query_items(q)
-    # Provide multiple keys so older frontend code can bind to whichever it used.
+def api_search(
+    q: Optional[str] = None,
+    author: Optional[str] = None,
+    year: Optional[str] = None,
+    venue: Optional[str] = None,
+):
+    clean_q, tokens = parse_search(q)
+    a = author or tokens.get("author")
+    y = year   or tokens.get("year")
+    v = venue  or tokens.get("venue")
+
+    items = _query_items(clean_q, author=a, year=y, venue=v)
     return {
         "items": items,
-        "papers": items,   # alias (compat)
-        "results": items,  # alias (compat)
+        "papers": items,
+        "results": items,
         "count": len(items),
         "q": q or "",
+        "filters": {"author": a, "year": y, "venue": v},
     }
 
-
 # -------------------------
-# API: simple list (JSON) — optional helper many UIs call
+# API: list (JSON)
 # -------------------------
 @app.get("/api/papers")
 def api_papers():
     items = _query_items(None)
     return {"items": items, "papers": items, "results": items, "count": len(items)}
 
-
 # -------------------------
-# API: UPLOAD (unchanged behavior)
+# API: upload
 # -------------------------
 @app.post("/upload")
 async def upload(
@@ -160,16 +238,13 @@ async def upload(
 
     relative_path = f"uploads/{safe_name}"
     paper_id = await index_pdf(dest, relative_path, year_hint=year, title_hint=title)
-    # Preserve existing response shape
     return {"id": paper_id, "path": relative_path}
 
-
 # -------------------------
-# API: DEV CLEAN (unchanged behavior)
+# API: dev clean
 # -------------------------
 @app.post("/dev/clean")
 def dev_clean():
-    # wipe DB + uploads + thumbs
     sess = Session()
     try:
         sess.query(PaperORM).delete()
@@ -177,14 +252,14 @@ def dev_clean():
     finally:
         sess.close()
 
-    for p in (UPLOADS_DIR.glob("*.pdf")):
+    for p in UPLOADS_DIR.glob("*.pdf"):
         p.unlink(missing_ok=True)
-    for t in (THUMBS_DIR.glob("*.png")):
+    for t in THUMBS_DIR.glob("*.png"):
         t.unlink(missing_ok=True)
     return RedirectResponse(url="/", status_code=303)
 
 # -------------------------
-# API: MANUAL METADATA REFRESH (unchanged behavior)
+# API: refresh metadata
 # -------------------------
 @app.post("/api/papers/{paper_id}/refresh_metadata")
 async def refresh_metadata(paper_id: str):
@@ -231,8 +306,9 @@ async def refresh_metadata(paper_id: str):
             s.commit()
         return {"updated": changed}
 
-
-# ---------- Optional debug helpers (no UI change) ----------
+# -------------------------
+# Debug endpoints
+# -------------------------
 @app.get("/api/debug/paths")
 def debug_paths():
     from app.config import ROOT_DIR, DATA_DIR, UPLOADS_DIR, THUMBS_DIR, TEMPLATES_DIR
