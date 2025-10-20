@@ -54,7 +54,9 @@
           <div class="min-w-0 flex-1 overflow-hidden">
             {% set authors = paper.authors or [] %}
             {% if authors|length > 0 %}
-              <span title="{{ authors|join(', ') }}" class="block truncate">{{ authors|join(', ') }}</span>
+              <span title="{{ authors|join(', ') }}" class="block truncate paper-author">
+  {{ authors|join(', ') }}
+</span>
             {% else %}
               <span class="opacity-70">Unknown author</span>
             {% endif %}
@@ -65,13 +67,17 @@
         <div class="flex flex-wrap gap-2 mt-2 text-xs">
           {% if paper.venue %}
             <span class="inline-flex items-center rounded-full px-3 py-1 font-medium
-                           bg-slate-100/80 text-slate-800 ring-1 ring-slate-950/10
-                           dark:bg-white/10 dark:text-slate-100 dark:ring-white/10">{{ paper.venue }}</span>
+               bg-slate-100/80 text-slate-800 ring-1 ring-slate-950/10
+               dark:bg-white/10 dark:text-slate-100 dark:ring-white/10 paper-venue">
+              {{ paper.venue }}
+            </span>
           {% endif %}
           {% if paper.year %}
             <span class="inline-flex items-center rounded-full px-2.5 py-0.5 font-semibold
-                           bg-indigo-100/80 text-indigo-800 ring-1 ring-indigo-900/10
-                           dark:bg-indigo-500/20 dark:text-indigo-200 dark:ring-indigo-400/30">{{ paper.year }}</span>
+               bg-indigo-100/80 text-indigo-800 ring-1 ring-indigo-900/10
+               dark:bg-indigo-500/20 dark:text-indigo-200 dark:ring-indigo-400/30 paper-year">
+              {{ paper.year }}
+            </span>
           {% endif %}
           {% if paper.data_src %}
             <span class="inline-flex items-center rounded-full px-3 py-1 font-semibold

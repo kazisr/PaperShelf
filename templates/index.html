@@ -1,7 +1,7 @@
 {% extends "base.html" %} {% block title %}PaperShelf{% endblock %} {% block content %}
 
 <!-- Top panel · Material 3 style (all features preserved) -->
-<div class="mb-6">
+<div class="mb-6 relative z-[200]">
   <div class="rounded-3xl bg-white/95 dark:bg-slate-900/80 shadow-lg ring-1 ring-slate-950/5 dark:ring-white/10 backdrop-blur supports-[backdrop-filter]:backdrop-blur">
     <div class="p-4 md:p-5">
       <div class="flex flex-col gap-4">
@@ -22,24 +22,98 @@
               oninput="liveSearch(this.value)"
             />
           </form>
-            <!-- Advanced filters (author / year / venue) -->
+            <!-- Advanced filters with custom autocomplete -->
             <div class="flex items-center gap-2 w-auto">
-              <input name="author" id="f-author" placeholder="Author"
-                     class="w-36 md:w-44 px-3 py-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600/60 focus:border-blue-500 transition"
-                     oninput="queueSearch()" />
-              <input name="year" id="f-year" placeholder="Year or 2020-2023"
-                     class="w-36 md:w-44 px-3 py-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600/60 focus:border-blue-500 transition"
-                     oninput="queueSearch()" />
-              <input name="venue" id="f-venue" placeholder="Venue (NeurIPS, ICLR, …)"
-                     class="w-40 md:w-48 px-3 py-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600/60 focus:border-blue-500 transition"
-                     oninput="queueSearch()" />
-              <!-- Clear button instead of Search -->
+            <style>
+                .ac-menu{
+  position: absolute;
+  inset-inline: 0;
+  top: calc(100% + .25rem);
+  z-index: 999;              /* bump up */
+  max-height: 12rem;
+  overflow-y: auto;
+  border-radius: 1rem;
+  border: 1px solid rgba(15,23,42,.08);
+  background: rgba(255,255,255,.95);
+  backdrop-filter: blur(8px);
+  box-shadow:
+    0 1px 2px rgba(0,0,0,.04),
+    0 4px 8px rgba(0,0,0,.08),
+    0 8px 20px rgba(0,0,0,.06);
+  transform: translateZ(0);  /* promote to own layer */
+}
+                .dark .ac-menu{
+  border-color: rgba(255,255,255,.08);
+  background: rgba(30,41,59,.95);
+  box-shadow:
+    0 1px 2px rgba(255,255,255,.04),
+    0 4px 8px rgba(255,255,255,.06),
+    0 8px 20px rgba(255,255,255,.04);
+}
+
+              .ac-item{
+                padding: .55rem .9rem;
+                font-size: .925rem;
+                line-height: 1.2;
+                color: rgb(30,41,59);
+                cursor: pointer;
+                white-space: nowrap;
+                text-overflow: ellipsis;
+                overflow: hidden;
+                transition: background .15s ease;
+              }
+
+              .dark .ac-item{ color: rgb(226,232,240); }
+
+              .ac-item:hover, .ac-item[aria-selected="true"]{
+                background: rgba(37,99,235,.10);
+              }
+              .dark .ac-item:hover, .dark .ac-item[aria-selected="true"]{
+                background: rgba(125,211,252,.16);
+              }
+            </style>
+              <!-- Author -->
+              <div class="relative">
+                <input name="author" id="f-author" placeholder="Author"
+                       class="w-36 md:w-44 px-3 py-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80
+                              text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400
+                              border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2
+                              focus:ring-blue-600/60 focus:border-blue-500 transition"
+                       oninput="queueSearch()" autocomplete="off" />
+                <!-- Suggestion menu -->
+                <div id="ac-author" class="ac-menu hidden"></div>
+              </div>
+
+              <!-- Year -->
+              <div class="relative">
+                <input name="year" id="f-year" placeholder="Year or 2020-2023"
+                       class="w-36 md:w-44 px-3 py-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80
+                              text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400
+                              border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2
+                              focus:ring-blue-600/60 focus:border-blue-500 transition"
+                       oninput="queueSearch()" autocomplete="off" />
+                <div id="ac-year" class="ac-menu hidden"></div>
+              </div>
+
+              <!-- Venue -->
+              <div class="relative">
+                <input name="venue" id="f-venue" placeholder="Venue (NeurIPS, ICLR, …)"
+                       class="w-40 md:w-48 px-3 py-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80
+                              text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400
+                              border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2
+                              focus:ring-blue-600/60 focus:border-blue-500 transition"
+                       oninput="queueSearch()" autocomplete="off" />
+                <div id="ac-venue" class="ac-menu hidden"></div>
+              </div>
+
+              <!-- Clear -->
               <button type="button" onclick="clearFilters()" title="Clear all filters"
-                      class="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-[0.98] transition">
+                      class="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200
+                             border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700
+                             active:scale-[0.98] transition">
                 <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
-                <span class="text-sm font-semibold">Clear</span>
               </button>
             </div>
 
@@ -124,13 +198,11 @@
       .ps-slide.is-active {
         transform: scale(1) translateY(-2px);
         box-shadow: 0 10px 22px rgba(2,6,23,.22);
-        z-index: 3;
       }
       .ps-slide.is-inactive {
         transform: scale(.9);
         opacity: .8;
         box-shadow: 0 2px 6px rgba(2,6,23,.12);
-        z-index: 1;
       }
       .ps-ghost {
         opacity: 0;
@@ -648,5 +720,180 @@
     // Reload all papers (show everything)
     doSearch();
   }
+
+function updateAutoCompleteSuggestions() {
+  const authors = new Set();
+  const years   = new Set();
+  const venues  = new Set();
+
+  // Collect authors (split by comma and trim)
+  document.querySelectorAll('.paper-author').forEach(el => {
+    const txt = el.textContent || '';
+    txt.split(',').forEach(a => {
+      const clean = a.trim();
+      if (clean) authors.add(clean);
+    });
+  });
+
+  // Collect years and venues
+  document.querySelectorAll('.paper-year').forEach(el => {
+    const y = el.textContent.trim();
+    if (y) years.add(y);
+  });
+
+  document.querySelectorAll('.paper-venue').forEach(el => {
+    const v = el.textContent.trim();
+    if (v) venues.add(v);
+  });
+
+  // Fill datalist elements
+  const fillDatalist = (id, values) => {
+    const dl = document.getElementById(id);
+    if (!dl) return;
+    dl.innerHTML = '';
+    [...values].sort((a, b) => a.localeCompare(b)).forEach(v => {
+      const opt = document.createElement('option');
+      opt.value = v;
+      dl.appendChild(opt);
+    });
+  };
+
+  fillDatalist('authors-list', authors);
+  fillDatalist('years-list', years);
+  fillDatalist('venues-list', venues);
+}
+
+// Re-hook after SSR swaps or DOM updates
+document.addEventListener('DOMContentLoaded', updateAutoCompleteSuggestions);
+const oldSwap = swapGridFromSSRParams;
+swapGridFromSSRParams = async function(params) {
+  await oldSwap(params);
+  updateAutoCompleteSuggestions();
+};
+
+  // Caches filled from visible cards
+  const AC_CACHE = { author: [], year: [], venue: [] };
+
+  // Build sets from current page cards
+  function updateAutoCompleteSuggestions() {
+    const aSet = new Set(), ySet = new Set(), vSet = new Set();
+
+    // AUTHORS: split on commas -> unique names
+    document.querySelectorAll('.paper-author').forEach(el => {
+      (el.textContent || '').split(',').forEach(name => {
+        const clean = name.trim();
+        if (clean) aSet.add(clean);
+      });
+    });
+
+    // YEARS
+    document.querySelectorAll('.paper-year').forEach(el => {
+      const y = (el.textContent || '').trim();
+      if (y) ySet.add(y);
+    });
+
+    // VENUES
+    document.querySelectorAll('.paper-venue').forEach(el => {
+      const v = (el.textContent || '').trim();
+      if (v) vSet.add(v);
+    });
+
+    AC_CACHE.author = [...aSet].sort((a,b)=>a.localeCompare(b));
+    AC_CACHE.year   = [...ySet].sort((a,b)=>a.localeCompare(b));
+    AC_CACHE.venue  = [...vSet].sort((a,b)=>a.localeCompare(b));
+  }
+
+  // Attach a custom autocomplete to an input
+  function attachAutocomplete({ inputId, menuId, key, filterFn }) {
+    const input = document.getElementById(inputId);
+    const menu  = document.getElementById(menuId);
+    if (!input || !menu) return;
+
+    let activeIndex = -1;
+
+    function render(list) {
+      menu.innerHTML = '';
+      list.forEach((val, idx) => {
+        const item = document.createElement('div');
+        item.className = 'ac-item';
+        item.textContent = val;
+        item.setAttribute('role', 'option');
+        item.addEventListener('mousedown', (e) => {
+          e.preventDefault(); // keep focus
+          input.value = val;
+          hide();
+          queueSearch(); // trigger your search
+        });
+        if (idx === activeIndex) item.setAttribute('aria-selected','true');
+        menu.appendChild(item);
+      });
+      menu.classList.toggle('hidden', list.length === 0);
+    }
+
+    function show() {
+      const list = getFiltered();
+      activeIndex = -1;
+      render(list);
+    }
+
+    function hide() { menu.classList.add('hidden'); }
+
+    function getFiltered() {
+      const val = input.value.trim();
+      const base = AC_CACHE[key] || [];
+      if (!val) return base.slice(0, 100); // cap if huge
+      return base.filter(v => filterFn(v, val)).slice(0, 100);
+    }
+
+    input.addEventListener('focus', show);
+    input.addEventListener('input', show);
+
+    input.addEventListener('keydown', (e) => {
+      const items = Array.from(menu.querySelectorAll('.ac-item'));
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        activeIndex = Math.min(items.length - 1, activeIndex + 1);
+        render(getFiltered());
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeIndex = Math.max(0, activeIndex - 1);
+        render(getFiltered());
+      } else if (e.key === 'Enter') {
+        if (!menu.classList.contains('hidden') && activeIndex >= 0) {
+          e.preventDefault();
+          const val = items[activeIndex]?.textContent || '';
+          if (val) {
+            input.value = val;
+            hide();
+            queueSearch();
+          }
+        }
+      } else if (e.key === 'Escape') {
+        hide();
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!menu.contains(e.target) && e.target !== input) hide();
+    });
+  }
+
+  // Basic case-insensitive contains; tweakable per field
+  const icontains = (a,b)=>a.toLowerCase().includes(b.toLowerCase());
+
+  // Initialize on load
+  document.addEventListener('DOMContentLoaded', () => {
+    updateAutoCompleteSuggestions();
+    attachAutocomplete({ inputId:'f-author', menuId:'ac-author', key:'author', filterFn:icontains });
+    attachAutocomplete({ inputId:'f-year',   menuId:'ac-year',   key:'year',   filterFn:icontains });
+    attachAutocomplete({ inputId:'f-venue',  menuId:'ac-venue',  key:'venue',  filterFn:icontains });
+  });
+
+  // Rebuild suggestions after SSR swap and keep menus in sync
+  const __oldSwapParams = swapGridFromSSRParams;
+  swapGridFromSSRParams = async function(params){
+    await __oldSwapParams(params);
+    updateAutoCompleteSuggestions();
+  };
 </script>
 {% endblock %}
