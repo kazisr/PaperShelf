@@ -11,7 +11,7 @@ Features
 - Upload and auto-list PDF files (drag & drop or folder import)
 - Dynamic search by paper title, author, year, and venue
 - Material 3–inspired responsive UI (with dark mode)
-- Live filtering without page reloads
+- Live filtering
 - SQLite database for metadata persistence
 
 ------------------------------------------------------------
@@ -85,6 +85,6 @@ gunicorn>=21.2.0
 Author
 ------------------------------------------------------------
 Kazi Shahrier Rafid
-Assistant Programmer, SEU | Full-Stack Developer
-Email: kazi.rafid@seu.edu.bd
+Research Student
 Kanazawa University — Frontier Engineering (MEng)
+Email: kazi.rafid@seu.edu.bd
