@@ -5,10 +5,14 @@
   <div class="rounded-3xl bg-white/95 dark:bg-slate-900/80 shadow-lg ring-1 ring-slate-950/5 dark:ring-white/10 backdrop-blur supports-[backdrop-filter]:backdrop-blur">
     <div class="p-4 md:p-5">
       <div class="flex flex-col gap-4">
+          <!-- Row: Search + Filters + Actions (mobile-first responsive) -->
+            <div class="grid w-full gap-3
+            grid-cols-1
+            sm:grid-cols-2
+            lg:grid-cols-[1fr_auto_auto] items-start">
 
-        <!-- Row: Search (filled text field) + Actions (icon buttons) -->
-        <div class="flex items-center gap-3">
-          <form method="get" class="relative flex-1 min-w-0">
+          <!-- Search (full width on mobile, grows on larger screens) -->
+          <form method="get" class="relative min-w-0 order-1 sm:order-1 lg:order-1">
             <label class="absolute left-3 top-1/2 -translate-y-1/2 flex items-center justify-center pointer-events-none">
               <svg class="w-5 h-5 text-blue-600/70 dark:text-sky-400/80" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M10.5 17a6.5 6.5 0 1 1 0-13 6.5 6.5 0 0 1 0 13Z" />
@@ -18,108 +22,110 @@
               name="q"
               value="{{ q }}"
               placeholder="Search papers"
-              class="w-full pl-10 pr-4 py-3 rounded-2xl bg-slate-100/90 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600/60 focus:border-blue-500 transition"
+              class="w-full pl-10 pr-4 py-2 rounded-2xl
+                     bg-slate-100/90 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100
+                     placeholder:text-slate-500 dark:placeholder:text-slate-400
+                     border border-slate-200 dark:border-slate-700
+                     focus:outline-none focus:ring-2 focus:ring-blue-600/60 focus:border-blue-500
+                     transition"
               oninput="liveSearch(this.value)"
+              inputmode="search"
             />
           </form>
-            <!-- Advanced filters with custom autocomplete -->
-            <div class="flex items-center gap-2 w-auto">
-            <style>
-                .ac-menu{
-  position: absolute;
-  inset-inline: 0;
-  top: calc(100% + .25rem);
-  z-index: 999;              /* bump up */
-  max-height: 12rem;
-  overflow-y: auto;
-  border-radius: 1rem;
-  border: 1px solid rgba(15,23,42,.08);
-  background: rgba(255,255,255,.95);
-  backdrop-filter: blur(8px);
-  box-shadow:
-    0 1px 2px rgba(0,0,0,.04),
-    0 4px 8px rgba(0,0,0,.08),
-    0 8px 20px rgba(0,0,0,.06);
-  transform: translateZ(0);  /* promote to own layer */
-}
-                .dark .ac-menu{
-  border-color: rgba(255,255,255,.08);
-  background: rgba(30,41,59,.95);
-  box-shadow:
-    0 1px 2px rgba(255,255,255,.04),
-    0 4px 8px rgba(255,255,255,.06),
-    0 8px 20px rgba(255,255,255,.04);
-}
 
-              .ac-item{
-                padding: .55rem .9rem;
-                font-size: .925rem;
-                line-height: 1.2;
-                color: rgb(30,41,59);
-                cursor: pointer;
-                white-space: nowrap;
-                text-overflow: ellipsis;
-                overflow: hidden;
-                transition: background .15s ease;
-              }
+          <!-- Filters (stack on mobile, inline on >= lg) -->
+          <div class="grid order-3 sm:order-2 lg:order-2 gap-2
+                      grid-cols-1 sm:grid-cols-2 lg:grid-cols-3
+                      w-full lg:w-auto lg:min-w-[32rem]">
+              <style>
+  /* Autocomplete menu: mobile-friendly & above-carousel */
+  .ac-menu{
+    position: absolute;
+    left: 0; right: 0; top: calc(100% + .25rem);
+    z-index: 999;               /* above slides */
+    max-height: min(50vh, 14rem);
+    overflow-y: auto;
+    border-radius: 1rem;
+    border: 1px solid rgba(15,23,42,.08);
+    background: rgba(255,255,255,.97);
+    backdrop-filter: blur(8px);
+    box-shadow:
+      0 1px 2px rgba(0,0,0,.04),
+      0 6px 16px rgba(0,0,0,.10),
+      0 16px 32px rgba(0,0,0,.08);
+    transform: translateZ(0);
+    -webkit-overflow-scrolling: touch;
+  }
+  .dark .ac-menu{
+    border-color: rgba(255,255,255,.08);
+    background: rgba(30,41,59,.97);
+    box-shadow:
+      0 1px 2px rgba(255,255,255,.04),
+      0 6px 16px rgba(255,255,255,.06),
+      0 16px 32px rgba(255,255,255,.04);
+  }
 
-              .dark .ac-item{ color: rgb(226,232,240); }
+  /* Mobile: stretch menu to viewport padding so it doesn’t get clipped */
+  @media (max-width: 640px){
+    .ac-menu{
+      left: -0.5rem;
+      right: -0.5rem;
+      width: auto;
+      max-width: none;
+    }
+  }
 
-              .ac-item:hover, .ac-item[aria-selected="true"]{
-                background: rgba(37,99,235,.10);
-              }
-              .dark .ac-item:hover, .dark .ac-item[aria-selected="true"]{
-                background: rgba(125,211,252,.16);
-              }
-            </style>
-              <!-- Author -->
-              <div class="relative">
-                <input name="author" id="f-author" placeholder="Author"
-                       class="w-36 md:w-44 px-3 py-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80
-                              text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400
-                              border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2
-                              focus:ring-blue-600/60 focus:border-blue-500 transition"
-                       oninput="queueSearch()" autocomplete="off" />
-                <!-- Suggestion menu -->
-                <div id="ac-author" class="ac-menu hidden"></div>
-              </div>
-
-              <!-- Year -->
-              <div class="relative">
-                <input name="year" id="f-year" placeholder="Year or 2020-2023"
-                       class="w-36 md:w-44 px-3 py-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80
-                              text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400
-                              border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2
-                              focus:ring-blue-600/60 focus:border-blue-500 transition"
-                       oninput="queueSearch()" autocomplete="off" />
-                <div id="ac-year" class="ac-menu hidden"></div>
-              </div>
-
-              <!-- Venue -->
-              <div class="relative">
-                <input name="venue" id="f-venue" placeholder="Venue (NeurIPS, ICLR, …)"
-                       class="w-40 md:w-48 px-3 py-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80
-                              text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400
-                              border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2
-                              focus:ring-blue-600/60 focus:border-blue-500 transition"
-                       oninput="queueSearch()" autocomplete="off" />
-                <div id="ac-venue" class="ac-menu hidden"></div>
-              </div>
-
-              <!-- Clear -->
-              <button type="button" onclick="clearFilters()" title="Clear all filters"
-                      class="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200
-                             border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700
-                             active:scale-[0.98] transition">
-                <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+  /* Nicer touch targets */
+  .ac-item{
+    padding: .65rem .95rem;
+    font-size: .95rem;
+    line-height: 1.25;
+    cursor: pointer;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    transition: background .15s ease;
+  }
+  .dark .ac-item{ color: rgb(226,232,240); }
+  .ac-item:hover, .ac-item[aria-selected="true"]{ background: rgba(37,99,235,.10); }
+  .dark .ac-item:hover, .dark .ac-item[aria-selected="true"]{ background: rgba(125,211,252,.16); }
+</style>
+            <!-- Author -->
+            <div class="relative">
+              <input name="author" id="f-author" placeholder="Author"
+                     class="w-full px-3 py-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80
+                            text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400
+                            border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2
+                            focus:ring-blue-600/60 focus:border-blue-500 transition"
+                     oninput="queueSearch()" autocomplete="off" />
+              <div id="ac-author" class="ac-menu hidden"></div>
             </div>
 
-          <!-- Actions (icon buttons with state layer) -->
-          <div class="flex items-center gap-2 shrink-0">
-            <!-- Select Folder (label controls hidden input) -->
+            <!-- Year -->
+            <div class="relative">
+              <input name="year" id="f-year" placeholder="Year or 2020-2023"
+                     class="w-full px-3 py-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80
+                            text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400
+                            border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2
+                            focus:ring-blue-600/60 focus:border-blue-500 transition"
+                     oninput="queueSearch()" autocomplete="off" inputmode="numeric" />
+              <div id="ac-year" class="ac-menu hidden"></div>
+            </div>
+
+            <!-- Venue -->
+            <div class="relative">
+              <input name="venue" id="f-venue" placeholder="Venue (NeurIPS, ICLR, …)"
+                     class="w-full px-3 py-2 rounded-xl bg-slate-100/90 dark:bg-slate-800/80
+                            text-slate-900 dark:text-slate-100 placeholder:text-slate-500 dark:placeholder:text-slate-400
+                            border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2
+                            focus:ring-blue-600/60 focus:border-blue-500 transition"
+                     oninput="queueSearch()" autocomplete="off" />
+              <div id="ac-venue" class="ac-menu hidden"></div>
+            </div>
+          </div>
+
+          <!-- Actions (stay to the right on desktop, drop under on mobile) -->
+          <div class="flex items-center gap-2 order-2 sm:order-3 lg:order-3 justify-start sm:justify-end">
             <label for="folderPicker"
                    class="relative inline-flex items-center justify-center size-10 rounded-full text-blue-700 dark:text-sky-300 hover:bg-blue-600/10 dark:hover:bg-white/10 active:scale-[0.98] transition"
                    title="Select folder" aria-label="Select folder">
@@ -129,7 +135,6 @@
             </label>
             <input id="folderPicker" type="file" webkitdirectory directory multiple hidden />
 
-            <!-- Clean DB (POST) -->
             <form method="post" action="/dev/clean" class="shrink-0" title="Clean DB &amp; Files" aria-label="Clean DB &amp; Files">
               <button type="submit"
                 class="relative inline-flex items-center justify-center size-10 rounded-full text-red-600 dark:text-red-400 border border-transparent hover:bg-red-600/10 dark:hover:bg-white/10 active:scale-[0.98] transition">
@@ -138,6 +143,14 @@
                 </svg>
               </button>
             </form>
+
+            <!-- Clear button -->
+            <button type="button" onclick="clearFilters()" title="Clear all filters"
+                    class="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-[0.98] transition">
+              <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         </div>
 
