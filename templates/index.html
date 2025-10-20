@@ -126,6 +126,13 @@
 
           <!-- Actions (stay to the right on desktop, drop under on mobile) -->
           <div class="flex items-center gap-2 order-2 sm:order-3 lg:order-3 justify-start sm:justify-end">
+            <!-- Clear button -->
+            <button type="button" onclick="clearFilters()" title="Clear all filters"
+                    class="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-[0.98] transition">
+              <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
             <label for="folderPicker"
                    class="relative inline-flex items-center justify-center size-10 rounded-full text-blue-700 dark:text-sky-300 hover:bg-blue-600/10 dark:hover:bg-white/10 active:scale-[0.98] transition"
                    title="Select folder" aria-label="Select folder">
@@ -134,7 +141,6 @@
               </svg>
             </label>
             <input id="folderPicker" type="file" webkitdirectory directory multiple hidden />
-
             <form method="post" action="/dev/clean" class="shrink-0" title="Clean DB &amp; Files" aria-label="Clean DB &amp; Files">
               <button type="submit"
                 class="relative inline-flex items-center justify-center size-10 rounded-full text-red-600 dark:text-red-400 border border-transparent hover:bg-red-600/10 dark:hover:bg-white/10 active:scale-[0.98] transition">
@@ -143,14 +149,6 @@
                 </svg>
               </button>
             </form>
-
-            <!-- Clear button -->
-            <button type="button" onclick="clearFilters()" title="Clear all filters"
-                    class="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-[0.98] transition">
-              <svg xmlns="http://www.w3.org/2000/svg" class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
           </div>
         </div>
 
@@ -632,7 +630,7 @@
   });
 }
 
-  function attachAutoScroll({
+function attachAutoScroll({
   railId = 'cards',
   intervalMs = 3000,
   pauseAfterUserMs = 1500
@@ -640,47 +638,60 @@
   const rail = document.getElementById(railId);
   if (!rail) return;
 
-  // clear timers
-  if (rail.__autoTimer)  { clearInterval(rail.__autoTimer);  rail.__autoTimer  = null; }
-  if (rail.__resumeTimer){ clearTimeout(rail.__resumeTimer); rail.__resumeTimer = null; }
+  // --- helpers
+  const stopAuto = () => {
+    if (rail.__autoTimer) clearInterval(rail.__autoTimer);
+    rail.__autoTimer = null;
+  };
+  const clearResume = () => {
+    if (rail.__resumeTimer) clearTimeout(rail.__resumeTimer);
+    rail.__resumeTimer = null;
+  };
+  const startAuto = () => {
+    stopAuto();
+    rail.__autoTimer = setInterval(() => {
+      const realSlides = Array.from(rail.querySelectorAll('.ps-slide:not([data-ghost])'));
+      if (realSlides.length <= 1) return;
+      // find center index
+      const mid = rail.scrollLeft + rail.clientWidth / 2;
+      let best = 0, bestDist = Infinity;
+      for (let i = 0; i < realSlides.length; i++) {
+        const c = realSlides[i].offsetLeft + realSlides[i].clientWidth / 2;
+        const d = Math.abs(c - mid);
+        if (d < bestDist) { best = i; bestDist = d; }
+      }
+      // scroll to next
+      const next = (best + 1) % realSlides.length;
+      realSlides[next]?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }, intervalMs);
+  };
 
-  // ensure ghosts present (in case SSR just refreshed)
-  ensureGhostSlides(rail);
+  // try to resume only when not hovered/hidden
+  const scheduleResume = (delay = pauseAfterUserMs) => {
+    clearResume();
+    rail.__resumeTimer = setTimeout(function tryResume(){
+      // don’t resume while hovered or tab hidden
+      const hovered = rail.matches(':hover');
+      if (hovered || document.hidden) {
+        rail.__resumeTimer = setTimeout(tryResume, 300);
+        return;
+      }
+      startAuto();
+    }, delay);
+  };
 
+  // reset any old timers (in case of re-init after SSR swap)
+  stopAuto();
+  clearResume();
+
+  // ensure ghost slides exist (yours)
+  if (typeof ensureGhostSlides === 'function') ensureGhostSlides(rail);
+
+  // need at least 2 slides
   const realSlides = Array.from(rail.querySelectorAll('.ps-slide:not([data-ghost])'));
   if (realSlides.length <= 1) return;
 
-  const centerIndex = () => {
-    const mid = rail.scrollLeft + rail.clientWidth / 2;
-    let best = 0, bestDist = Infinity;
-    for (let i = 0; i < realSlides.length; i++) {
-      const c = realSlides[i].offsetLeft + realSlides[i].clientWidth / 2;
-      const d = Math.abs(c - mid);
-      if (d < bestDist) { best = i; bestDist = d; }
-    }
-    return best;
-  };
-
-  const scrollToReal = (i) => {
-    i = (i + realSlides.length) % realSlides.length;
-    realSlides[i]?.scrollIntoView({
-      behavior: 'smooth',
-      inline: 'center',
-      block: 'nearest'
-    });
-  };
-
-  const next = () => scrollToReal(centerIndex() + 1);
-
-  const startAuto = () => { stopAuto(); rail.__autoTimer = setInterval(next, intervalMs); };
-  const stopAuto  = () => { if (rail.__autoTimer) clearInterval(rail.__autoTimer); rail.__autoTimer = null; };
-
-  const userPause = () => {
-    stopAuto();
-    if (rail.__resumeTimer) clearTimeout(rail.__resumeTimer);
-    rail.__resumeTimer = setTimeout(startAuto, pauseAfterUserMs);
-  };
-
+  // bind-once guard
   const bindOnce = (evt, handler, opts) => {
     const key = `__bound_${evt}`;
     if (rail[key]) return;
@@ -688,15 +699,32 @@
     rail[key] = true;
   };
 
-  bindOnce('pointerenter', userPause);
-  bindOnce('pointerleave', () => {});
-  bindOnce('wheel', () => { userPause(); }, { passive: true });
-  bindOnce('touchstart', () => { userPause(); }, { passive: true });
+  // hover: stop immediately; resume only after mouse leaves & a short delay
+  bindOnce('pointerenter', () => { stopAuto(); clearResume(); });
+  bindOnce('pointerleave', () => { scheduleResume(300); });
+
+  // user interactions: pause and resume later
+  bindOnce('wheel', () => { stopAuto(); scheduleResume(); }, { passive: true });
+  bindOnce('touchstart', () => { stopAuto(); scheduleResume(); }, { passive: true });
   bindOnce('keydown', (e) => {
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') userPause();
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { stopAuto(); scheduleResume(); }
   });
 
-  // Start after layout settles and center a sane initial slide
+  // accessibility: focus in/out
+  bindOnce('focusin', () => { stopAuto(); clearResume(); });
+  bindOnce('focusout', () => { scheduleResume(400); });
+
+  // tab visibility
+  const visKey = '__bound_visibility';
+  if (!rail[visKey]) {
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) { stopAuto(); clearResume(); }
+      else { scheduleResume(300); }
+    });
+    rail[visKey] = true;
+  }
+
+  // kick off
   requestAnimationFrame(() => {
     if (realSlides.length >= 2) {
       realSlides[1].scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' });
